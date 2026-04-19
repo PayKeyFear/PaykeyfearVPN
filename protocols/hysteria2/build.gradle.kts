@@ -30,9 +30,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.timber)
 
-    // Picked up automatically when third_party/hysteria2-mobile/build.sh
-    // drops hysteria.aar here.
-    implementation(fileTree("libs") { include("*.aar") })
+    // Umbrella paykeyfearnative.aar lives under :protocols:awg/libs/.
+    // See that module's build.gradle.kts + scripts/build-native.sh.
+    // Class lookup from this module uses reflection (Class.forName).
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

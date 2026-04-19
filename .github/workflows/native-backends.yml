@@ -82,23 +82,9 @@ jobs:
             ./scripts/build-native.sh
           fi
 
-      - name: Upload awg.aar
+      - name: Upload paykeyfearnative.aar
         uses: actions/upload-artifact@v4
         with:
-          name: awg-aar
-          path: protocols/awg/libs/awg.aar
-          if-no-files-found: error
-
-      - name: Upload vless.aar
-        uses: actions/upload-artifact@v4
-        with:
-          name: vless-aar
-          path: protocols/vless/libs/vless.aar
-          if-no-files-found: error
-
-      - name: Upload hysteria.aar
-        uses: actions/upload-artifact@v4
-        with:
-          name: hysteria-aar
-          path: protocols/hysteria2/libs/hysteria.aar
+          name: paykeyfearnative-aar
+          path: protocols/awg/libs/paykeyfearnative.aar
           if-no-files-found: error

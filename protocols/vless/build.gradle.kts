@@ -32,8 +32,12 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.timber)
 
-    // Picked up automatically when scripts/build-native.sh drops an .aar here.
-    implementation(fileTree("libs") { include("*.aar") })
+    // No fileTree("libs") dep here — the umbrella paykeyfearnative.aar
+    // lives under :protocols:awg/libs/ so there's exactly one copy on
+    // the app's classpath (shipping it twice trips AGP's duplicate
+    // classes / merge-native-libs checks). Class lookup here uses
+    // reflection via Class.forName at runtime; the umbrella .aar is on
+    // the app classloader via :protocols:awg's api dependency.
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

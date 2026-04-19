@@ -36,9 +36,18 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.timber)
 
-    // Picked up automatically when scripts/build-native.sh drops an .aar here.
-    // Absent by default so fresh clones build without Go/NDK.
-    implementation(fileTree("libs") { include("*.aar") })
+    // The umbrella .aar produced by scripts/build-native.sh lands in
+    // protocols/awg/libs/. It bundles ALL three protocols (awg + vless
+    // + hysteria2) into a single Java class
+    // `paykeyfearnative.Paykeyfearnative` so AGP doesn't see two
+    // libgojni.so or two go.Seq across modules. Using `api` so the
+    // umbrella is on the classpath of the other protocol modules
+    // (which depend on :protocols:awg only transitively via :core's
+    // shared-Protector dependency? — no: each protocol module
+    // currently does NOT depend on this one). Instead the bundle is
+    // exposed application-wide via the `app` module's direct dep on
+    // :protocols:awg, which already exists.
+    api(fileTree("libs") { include("*.aar") })
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

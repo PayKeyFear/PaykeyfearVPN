@@ -27,23 +27,23 @@ import timber.log.Timber
  */
 internal object Hysteria2Native {
     private val bridge: Bridge? = runCatching {
-        val cls = Class.forName("hy2mobile.Hy2mobile")
-        val protectorCls = Class.forName("hy2mobile.Protector")
+        val cls = Class.forName("paykeyfearnative.Paykeyfearnative")
+        val protectorCls = Class.forName("paykeyfearnative.Protector")
         Bridge(
             start = cls.getMethod(
-                "Start",
+                "Hy2Start",
                 String::class.java,
                 Int::class.javaPrimitiveType,
             ),
-            stop = cls.getMethod("Stop", String::class.java),
-            stats = cls.getMethod("Stats", String::class.java),
+            stop = cls.getMethod("Hy2Stop", String::class.java),
+            stats = cls.getMethod("Hy2Stats", String::class.java),
             setProtector = cls.getMethod("SetProtector", protectorCls),
-            lastError = cls.getMethod("LastError"),
+            lastError = cls.getMethod("Hy2LastError"),
             protectorCls = protectorCls,
         )
     }.onFailure {
         Timber.tag(TAG).d(
-            "hysteria.aar not on classpath (%s) — running in noop mode",
+            "paykeyfearnative.aar not on classpath (%s) — running in noop mode",
             it.javaClass.simpleName,
         )
     }.getOrNull()
@@ -70,7 +70,7 @@ internal object Hysteria2Native {
         val b = bridge ?: return null
         val handle = b.start.invoke(null, yamlConfig, tunFd) as? String
         if (handle.isNullOrEmpty()) {
-            Timber.tag(TAG).e("hy2mobile.Start failed: %s", b.lastError.invoke(null))
+            Timber.tag(TAG).e("Hy2Start failed: %s", b.lastError.invoke(null))
             return null
         }
         return handle

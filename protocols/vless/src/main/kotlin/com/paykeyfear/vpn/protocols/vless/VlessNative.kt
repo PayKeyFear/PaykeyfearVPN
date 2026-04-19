@@ -27,24 +27,24 @@ import timber.log.Timber
  */
 internal object VlessNative {
     private val bridge: Bridge? = runCatching {
-        val cls = Class.forName("vlessmobile.Vlessmobile")
-        val protectorCls = Class.forName("vlessmobile.Protector")
+        val cls = Class.forName("paykeyfearnative.Paykeyfearnative")
+        val protectorCls = Class.forName("paykeyfearnative.Protector")
         Bridge(
-            startXray = cls.getMethod("StartXray", String::class.java),
-            stopXray = cls.getMethod("StopXray", Int::class.javaPrimitiveType),
+            startXray = cls.getMethod("VlessStartXray", String::class.java),
+            stopXray = cls.getMethod("VlessStopXray", Int::class.javaPrimitiveType),
             t2sStart = cls.getMethod(
-                "Tun2SocksStart",
+                "VlessTun2SocksStart",
                 Int::class.javaPrimitiveType,
                 String::class.java,
                 Int::class.javaPrimitiveType,
             ),
-            t2sStop = cls.getMethod("Tun2SocksStop", Int::class.javaPrimitiveType),
+            t2sStop = cls.getMethod("VlessTun2SocksStop", Int::class.javaPrimitiveType),
             setProtector = cls.getMethod("SetProtector", protectorCls),
-            lastError = cls.getMethod("LastError"),
+            lastError = cls.getMethod("VlessLastError"),
             protectorCls = protectorCls,
         )
     }.onFailure {
-        Timber.tag(TAG).d("vless.aar not on classpath (%s) — running in noop mode", it.javaClass.simpleName)
+        Timber.tag(TAG).d("paykeyfearnative.aar not on classpath (%s) — running in noop mode", it.javaClass.simpleName)
     }.getOrNull()
 
     val NATIVE_AVAILABLE: Boolean get() = bridge != null
@@ -68,7 +68,7 @@ internal object VlessNative {
         val b = bridge ?: return INVALID_HANDLE
         val h = b.startXray.invoke(null, configJson) as Int
         if (h <= 0) {
-            Timber.tag(TAG).e("vlessmobile.StartXray failed: %s", b.lastError.invoke(null))
+            Timber.tag(TAG).e("VlessStartXray failed: %s", b.lastError.invoke(null))
             return INVALID_HANDLE
         }
         return h
@@ -82,7 +82,7 @@ internal object VlessNative {
         val b = bridge ?: return INVALID_HANDLE
         val h = b.t2sStart.invoke(null, tunFd, host, port) as Int
         if (h <= 0) {
-            Timber.tag(TAG).e("vlessmobile.Tun2SocksStart failed: %s", b.lastError.invoke(null))
+            Timber.tag(TAG).e("VlessTun2SocksStart failed: %s", b.lastError.invoke(null))
             return INVALID_HANDLE
         }
         return h

@@ -94,16 +94,15 @@ jobs:
           chmod +x scripts/build-native.sh
           ./scripts/build-native.sh --force
 
-      - name: Verify .aars present
+      - name: Verify umbrella .aar present
         run: |
           set -e
-          for aar in protocols/awg/libs/awg.aar protocols/vless/libs/vless.aar protocols/hysteria2/libs/hysteria.aar; do
-            if [ ! -f "$aar" ]; then
-              echo "::error::Missing $aar"
-              exit 1
-            fi
-            echo "$(ls -la "$aar")"
-          done
+          aar=protocols/awg/libs/paykeyfearnative.aar
+          if [ ! -f "$aar" ]; then
+            echo "::error::Missing $aar"
+            exit 1
+          fi
+          ls -la "$aar"
 
       - name: Decode keystore (if provided)
         id: keystore
@@ -140,14 +139,11 @@ jobs:
             app/build/outputs/bundle/release/*.aab
             app/build/outputs/apk/release/*.apk
 
-      - name: Upload .aars (for audit)
+      - name: Upload umbrella .aar (for audit)
         uses: actions/upload-artifact@v4
         with:
-          name: native-backends-${{ github.ref_name }}
-          path: |
-            protocols/awg/libs/awg.aar
-            protocols/vless/libs/vless.aar
-            protocols/hysteria2/libs/hysteria.aar
+          name: native-backend-${{ github.ref_name }}
+          path: protocols/awg/libs/paykeyfearnative.aar
 
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') && steps.keystore.outputs.signed == 'true'
