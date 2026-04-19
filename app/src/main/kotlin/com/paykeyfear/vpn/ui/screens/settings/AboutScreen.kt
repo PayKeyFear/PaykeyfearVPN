@@ -22,12 +22,19 @@ import com.paykeyfear.vpn.core.logging.NativeBackendVersions
 @Composable
 fun AboutScreen() {
     val backends = remember {
+        // Prime all three lookups so lastError captures the most recent
+        // (deterministic: awg runs first, the rest would throw the same
+        // class-loading error if the .aar is missing).
+        val awg = NativeBackendVersions.awg()
+        val vless = NativeBackendVersions.vless()
+        val hy2 = NativeBackendVersions.hysteria2()
         listOf(
-            "AmneziaWG (awg.aar)" to (NativeBackendVersions.awg() ?: "not bundled (noop mode)"),
-            "VLESS (vless.aar)" to (NativeBackendVersions.vless() ?: "not bundled (noop mode)"),
-            "Hysteria2 (hysteria.aar)" to (NativeBackendVersions.hysteria2() ?: "not bundled (noop mode)"),
+            "AmneziaWG" to (awg ?: "not bundled (noop mode)"),
+            "VLESS" to (vless ?: "not bundled (noop mode)"),
+            "Hysteria2" to (hy2 ?: "not bundled (noop mode)"),
         )
     }
+    val lookupError = remember { NativeBackendVersions.lastError }
 
     Column(
         Modifier
@@ -62,6 +69,15 @@ fun AboutScreen() {
                 },
             )
             HorizontalDivider()
+        }
+        if (lookupError != null) {
+            Text(
+                text = "Diagnostic: $lookupError",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
         }
         Text(
             text = stringResource(R.string.about_license),
