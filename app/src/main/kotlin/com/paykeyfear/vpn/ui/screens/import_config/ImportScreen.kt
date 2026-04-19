@@ -1,10 +1,13 @@
 package com.paykeyfear.vpn.ui.screens.import_config
 
+import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +49,29 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
             result.contents?.takeIf { it.isNotBlank() }?.let(viewModel::onTextChanged)
         }
 
+    // Build the scan options once — we re-use them whether the camera
+    // permission was already granted or has just been granted via the
+    // permission launcher below.
+    fun launchScanner() {
+        val opts = ScanOptions()
+            .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            .setBeepEnabled(false)
+            // Lock orientation: ZXing's CaptureActivity defaults to
+            // landscape with sensor orientation, which on most phones
+            // rotates the device the moment the activity launches and
+            // (combined with the missing CAMERA permission) made the
+            // scanner appear as a frozen sideways preview.
+            .setOrientationLocked(true)
+            .setCaptureActivity(com.journeyapps.barcodescanner.CaptureActivity::class.java)
+            .setPrompt(context.getString(R.string.import_scan_prompt))
+        qrScanner.launch(opts)
+    }
+
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) launchScanner()
+        }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -71,12 +97,17 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
         }
         OutlinedButton(
             onClick = {
-                val opts = ScanOptions()
-                    .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                    .setBeepEnabled(false)
-                    .setOrientationLocked(false)
-                    .setPrompt(context.getString(R.string.import_scan_prompt))
-                qrScanner.launch(opts)
+                // ZXing's embedded CaptureActivity does NOT request the
+                // CAMERA permission itself — if we launch it without the
+                // permission granted the camera preview silently fails
+                // and the user sees a rotated blank screen. Request
+                // first, then launch on grant.
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CAMERA,
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) launchScanner()
+                else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             },
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.import_scan_qr)) }
