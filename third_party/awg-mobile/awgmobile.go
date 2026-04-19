@@ -61,13 +61,12 @@ func Start(cfg string, tunFd int32) int32 {
 	}
 	_ = unix.SetNonblock(dup, true)
 
-	tdev, name, err := tun.CreateTUNFromFile(os.NewFile(uintptr(dup), "tun"), 0)
+	tdev, err := tun.CreateTUNFromFile(os.NewFile(uintptr(dup), "tun"), 0)
 	if err != nil {
 		_ = unix.Close(dup)
 		setLastError(fmt.Errorf("create tun: %w", err))
 		return -1
 	}
-	_ = name
 
 	logger := device.NewLogger(device.LogLevelError, "[awg] ")
 	dev := device.NewDevice(tdev, conn.NewDefaultBind(), logger)
@@ -83,7 +82,7 @@ func Start(cfg string, tunFd int32) int32 {
 		return -1
 	}
 
-	h := &handle{device: dev}
+	h := &awgHandle{device: dev}
 	id := int32(handleCounter.Add(1))
 	handles.Store(id, h)
 	return id
@@ -94,7 +93,7 @@ func Stop(handle int32) {
 	if !ok {
 		return
 	}
-	v.(*handle).device.Close()
+	v.(*awgHandle).device.Close()
 }
 
 func GetStats(h int32) string {
@@ -102,7 +101,7 @@ func GetStats(h int32) string {
 	if !ok {
 		return ""
 	}
-	dev := v.(*handle).device
+	dev := v.(*awgHandle).device
 
 	raw, err := dev.IpcGet()
 	if err != nil {
@@ -191,7 +190,7 @@ func init() {
 	protector.Store(Protector(noopProtector{}))
 }
 
-type handle struct {
+type awgHandle struct {
 	device *device.Device
 }
 
