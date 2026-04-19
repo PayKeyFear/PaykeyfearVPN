@@ -139,13 +139,9 @@ func Start(yamlConfig string, tunFd int32) string {
 		MTU:      1500,
 	}
 	engine.Insert(key)
-	if err := engine.Start(); err != nil {
-		engineMu.Unlock()
-		_ = lis.Close()
-		_ = c.Close()
-		setLastError(fmt.Errorf("tun2socks start: %w", err))
-		return ""
-	}
+	// engine.Start()/Stop() are void in xjasonlyu/tun2socks v2.x — errors
+	// surface via log + os.Exit from inside. We only track the flag.
+	engine.Start()
 	engineRunning = true
 	engineMu.Unlock()
 
@@ -171,9 +167,7 @@ func Stop(handleID string) {
 
 	engineMu.Lock()
 	if engineRunning {
-		if err := engine.Stop(); err != nil {
-			setLastError(fmt.Errorf("tun2socks stop: %w", err))
-		}
+		engine.Stop()
 		engineRunning = false
 	}
 	engineMu.Unlock()

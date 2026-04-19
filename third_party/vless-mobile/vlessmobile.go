@@ -139,10 +139,11 @@ func Tun2SocksStart(tunFd int32, socksHost string, socksPort int32) int32 {
 		MTU:      1500,
 	}
 	engine.Insert(key)
-	if err := engine.Start(); err != nil {
-		setLastError(fmt.Errorf("tun2socks start: %w", err))
-		return -1
-	}
+	// xjasonlyu/tun2socks's engine.Start()/engine.Stop() do not return
+	// errors — they log-and-exit on misconfig. Panics from inside are
+	// caught by the gomobile-injected recovery; we keep engineRunning
+	// tracking to guarantee at-most-one concurrent tun2socks instance.
+	engine.Start()
 	engineRunning = true
 
 	id := t2sCounter.Add(1)
@@ -162,9 +163,7 @@ func Tun2SocksStop(handle int32) {
 	if !engineRunning {
 		return
 	}
-	if err := engine.Stop(); err != nil {
-		setLastError(fmt.Errorf("tun2socks stop: %w", err))
-	}
+	engine.Stop()
 	engineRunning = false
 }
 
