@@ -48,3 +48,6 @@ Thumbs.db
 
 # Upstream Go clones produced by scripts/build-native.sh
 /vendor/
+
+# Scratch file used for multi-line commit messages on Windows
+/.commitmsg
