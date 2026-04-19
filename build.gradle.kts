@@ -11,12 +11,18 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
+// Resolve the version catalog entries up here — `libs` is only injected
+// into the root build script, not into the `subprojects { }` closure, so
+// referencing `libs.versions.detekt.get()` below fails with
+//   Extension with name 'libs' does not exist.
+val detektToolVersion = libs.versions.detekt.get()
+
 subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
     configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
-        toolVersion = libs.versions.detekt.get()
+        toolVersion = detektToolVersion
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
         buildUponDefaultConfig = true
         autoCorrect = true
