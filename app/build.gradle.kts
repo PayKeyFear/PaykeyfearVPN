@@ -131,7 +131,7 @@ dependencies {
     // jniLibs/*.so + AndroidManifest pieces are silently dropped from
     // the final APK — the reflective `Class.forName` lookup then fails
     // at runtime and every protocol degrades to noop ("not bundled").
-    implementation(name = "paykeyfearnative", ext = "aar")
+    implementation(group = "", name = "paykeyfearnative", ext = "aar")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
