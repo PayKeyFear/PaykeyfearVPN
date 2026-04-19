@@ -323,15 +323,19 @@ type obfsConnFactory struct {
 }
 
 func (f *obfsConnFactory) New(addr net.Addr) (net.PacketConn, error) {
-	udpAddr, ok := addr.(*net.UDPAddr)
-	if !ok {
+	if _, ok := addr.(*net.UDPAddr); !ok {
 		return nil, fmt.Errorf("unsupported addr type %T", addr)
 	}
 	conn, err := protectedListenUDP()
 	if err != nil {
 		return nil, err
 	}
-	return obfs.WrapPacketConn(conn, udpAddr, f.obfs), nil
+	// hysteria v2.6 obfs.WrapPacketConn signature is
+	//     WrapPacketConn(net.PacketConn, Obfuscator) net.PacketConn
+	// The earlier 3-arg form (with a server UDPAddr) is gone — the
+	// obfuscator no longer needs it because every client socket is a
+	// connected-UDP-style conn anyway.
+	return obfs.WrapPacketConn(conn, f.obfs), nil
 }
 
 func protectedListenUDP() (*net.UDPConn, error) {
