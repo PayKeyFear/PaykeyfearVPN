@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,7 +86,14 @@ class SplitTunnelViewModel
 
         fun toggle(pkg: String, checked: Boolean) {
             viewModelScope.launch {
-                val next = state.value.selected.toMutableSet().apply {
+                // Don't read state.value — it's produced by a WhileSubscribed
+                // StateFlow that stays at initialValue until someone actually
+                // collects it, so in unit tests the set we write back is
+                // computed against an empty seed. Reading the underlying
+                // preferences flow directly gives us the ground truth
+                // regardless of collection timing.
+                val current = preferences.splitTunnelPackages.first()
+                val next = current.toMutableSet().apply {
                     if (checked) add(pkg) else remove(pkg)
                 }
                 preferences.setSplitTunnelPackages(next)
