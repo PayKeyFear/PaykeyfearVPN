@@ -1,5 +1,6 @@
 package com.paykeyfear.vpn.protocols.awg
 
+import android.util.Base64
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 
 /**
@@ -7,11 +8,19 @@ import com.paykeyfear.vpn.core.model.ConnectionConfig
  * amneziawg-go's `IpcSet` protocol.
  *
  * See: https://github.com/amnezia-vpn/amneziawg-go (IPC section).
+ *
+ * IMPORTANT: WireGuard's userspace IPC uses **hex**-encoded 32-byte keys
+ * (`private_key=<64 hex chars>`), while wg-quick `.conf` files (and
+ * therefore [ConnectionConfig.Awg.privateKey] / `peerPublicKey` /
+ * `presharedKey`) carry the same bytes **base64**-encoded. We convert on
+ * the way out — passing the raw base64 to `IpcSet` makes amneziawg-go
+ * reject the config with an opaque "failed to set private_key" error,
+ * which surfaces in the UI as a generic "AWG refused config".
  */
 object AwgConfigRenderer {
     fun render(config: ConnectionConfig.Awg): String =
         buildString {
-            appendLine("private_key=${config.privateKey}")
+            appendLine("private_key=${toHexKey(config.privateKey)}")
             config.mtu?.let { appendLine("mtu=$it") }
             with(config.junk) {
                 jc?.let { appendLine("jc=$it") }
@@ -24,10 +33,35 @@ object AwgConfigRenderer {
                 h3?.let { appendLine("h3=$it") }
                 h4?.let { appendLine("h4=$it") }
             }
-            appendLine("public_key=${config.peerPublicKey}")
-            config.presharedKey?.let { appendLine("preshared_key=$it") }
+            appendLine("public_key=${toHexKey(config.peerPublicKey)}")
+            config.presharedKey?.let { appendLine("preshared_key=${toHexKey(it)}") }
             appendLine("endpoint=${config.endpoint.host}:${config.endpoint.port}")
             config.persistentKeepalive?.let { appendLine("persistent_keepalive_interval=$it") }
             config.allowedIps.forEach { appendLine("allowed_ip=$it") }
         }
+
+    /**
+     * Decodes a 32-byte WireGuard key from base64 and re-encodes it as a
+     * lowercase 64-char hex string. If the input is already hex (some
+     * configs ship that way) it is returned lowercased unchanged.
+     */
+    internal fun toHexKey(key: String): String {
+        val trimmed = key.trim()
+        if (trimmed.length == 64 && trimmed.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) {
+            return trimmed.lowercase()
+        }
+        val bytes = runCatching { Base64.decode(trimmed, Base64.NO_WRAP or Base64.NO_PADDING) }
+            .recoverCatching { Base64.decode(trimmed, Base64.DEFAULT) }
+            .getOrElse { throw IllegalArgumentException("WireGuard key is neither valid base64 nor hex: $trimmed") }
+        require(bytes.size == 32) { "WireGuard key must decode to 32 bytes, got ${bytes.size}" }
+        val sb = StringBuilder(64)
+        for (b in bytes) {
+            val v = b.toInt() and 0xFF
+            sb.append(HEX[v ushr 4])
+            sb.append(HEX[v and 0x0F])
+        }
+        return sb.toString()
+    }
+
+    private val HEX = "0123456789abcdef".toCharArray()
 }

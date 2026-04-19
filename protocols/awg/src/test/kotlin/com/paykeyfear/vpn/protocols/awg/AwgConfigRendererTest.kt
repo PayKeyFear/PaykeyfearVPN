@@ -5,17 +5,29 @@ import com.paykeyfear.vpn.core.model.AwgJunkParams
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.Endpoint
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class AwgConfigRendererTest {
+    // 32-byte base64 keys (all-zero / all-one / all-two padding) for round-trip testing.
+    private val privB64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    private val pubB64 = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+    private val pskB64 = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="
+
+    private val privHex = "0".repeat(64)
+    private val pubHex = "01".repeat(32)
+    private val pskHex = "02".repeat(32)
+
     @Test
     fun `render emits full IPC block in expected order`() {
         val cfg = ConnectionConfig.Awg(
             id = "id",
             displayName = "name",
             endpoint = Endpoint("198.51.100.7", 51820),
-            privateKey = "PRIV",
-            peerPublicKey = "PUB",
-            presharedKey = "PSK",
+            privateKey = privB64,
+            peerPublicKey = pubB64,
+            presharedKey = pskB64,
             addresses = listOf("10.0.0.2/32"),
             mtu = 1420,
             persistentKeepalive = 25,
@@ -23,9 +35,9 @@ class AwgConfigRendererTest {
             allowedIps = listOf("0.0.0.0/0", "::/0"),
         )
         val out = AwgConfigRenderer.render(cfg)
-        assertThat(out).contains("private_key=PRIV")
-        assertThat(out).contains("public_key=PUB")
-        assertThat(out).contains("preshared_key=PSK")
+        assertThat(out).contains("private_key=$privHex")
+        assertThat(out).contains("public_key=$pubHex")
+        assertThat(out).contains("preshared_key=$pskHex")
         assertThat(out).contains("endpoint=198.51.100.7:51820")
         assertThat(out).contains("persistent_keepalive_interval=25")
         assertThat(out).contains("mtu=1420")
@@ -41,13 +53,19 @@ class AwgConfigRendererTest {
             id = "id",
             displayName = "name",
             endpoint = Endpoint("h", 51820),
-            privateKey = "PRIV",
-            peerPublicKey = "PUB",
+            privateKey = privB64,
+            peerPublicKey = pubB64,
             addresses = listOf("10.0.0.2/32"),
         )
         val out = AwgConfigRenderer.render(cfg)
         assertThat(out).doesNotContain("preshared_key=")
         assertThat(out).doesNotContain("mtu=")
         assertThat(out).doesNotContain("jc=")
+    }
+
+    @Test
+    fun `toHexKey accepts hex passthrough`() {
+        assertThat(AwgConfigRenderer.toHexKey(pubHex)).isEqualTo(pubHex)
+        assertThat(AwgConfigRenderer.toHexKey(pubHex.uppercase())).isEqualTo(pubHex)
     }
 }

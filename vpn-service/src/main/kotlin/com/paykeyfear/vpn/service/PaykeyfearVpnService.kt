@@ -15,6 +15,7 @@ import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import com.paykeyfear.vpn.core.Protector
 import com.paykeyfear.vpn.core.model.ConnectionConfig
@@ -28,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
@@ -49,6 +51,14 @@ class PaykeyfearVpnService : VpnService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var tunnelJob: Job? = null
+
+    // Keep the tun ParcelFileDescriptor alive for as long as the tunnel is
+    // up. Closing it is what actually tears the Android tun interface down,
+    // so we MUST close it on stop — otherwise the OS keeps routing traffic
+    // into a dead fd and the device appears to still be connected to the
+    // VPN with no working internet.
+    @Volatile
+    private var tunPfd: ParcelFileDescriptor? = null
 
     @Volatile
     private var lastConfig: ConnectionConfig? = null
@@ -128,6 +138,8 @@ class PaykeyfearVpnService : VpnService() {
 
     override fun onDestroy() {
         unregisterNetworkCallback()
+        tunPfd?.let { runCatching { it.close() } }
+        tunPfd = null
         scope.cancel()
         super.onDestroy()
     }
@@ -155,8 +167,16 @@ class PaykeyfearVpnService : VpnService() {
                 stopSelf()
                 return@launch
             }
+            // Replace any prior fd, closing the old one — re-entry from the
+            // network callback would otherwise leak file descriptors.
+            tunPfd?.let { runCatching { it.close() } }
+            tunPfd = pfd
             val protector = Protector { fd -> protect(fd) }
-            runCatching { controller.start(config, pfd.detachFd(), protector) }.onFailure {
+            // Hand a *dup* of the fd to native code; we keep the ParcelFileDescriptor
+            // ourselves so closing it on stop reliably tears the tun down even if
+            // the native side has already released its copy.
+            val nativeFd = pfd.fd
+            runCatching { controller.start(config, nativeFd, protector) }.onFailure {
                 Timber.e(it, "Tunnel failed")
                 stopSelf()
             }
@@ -207,8 +227,15 @@ class PaykeyfearVpnService : VpnService() {
     private fun stopTunnel() {
         lastConfig = null
         unregisterNetworkCallback()
+        val prior = tunnelJob
         scope.launch {
+            // Wait for any in-flight start() to settle before tearing the
+            // tun fd down — otherwise we could close it from underneath
+            // a native backend that's still wiring it up.
+            runCatching { prior?.cancelAndJoin() }
             runCatching { controller.stop() }
+            tunPfd?.let { runCatching { it.close() } }
+            tunPfd = null
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }

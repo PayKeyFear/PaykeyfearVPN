@@ -10,14 +10,17 @@ import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class AwgTunnelTest {
     private val cfg = ConnectionConfig.Awg(
         id = "id",
         displayName = "n",
         endpoint = Endpoint("h", 51820),
-        privateKey = "PRIV",
-        peerPublicKey = "PUB",
+        privateKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        peerPublicKey = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
         addresses = listOf("10.0.0.2/32"),
     )
 
@@ -33,7 +36,7 @@ class AwgTunnelTest {
         verify {
             native.installProtector(Protector.NOOP)
             native.start(
-                match { it.contains("private_key=PRIV") && it.contains("endpoint=h:51820") },
+                match { it.contains("private_key=") && it.contains("endpoint=h:51820") },
                 7,
             )
         }

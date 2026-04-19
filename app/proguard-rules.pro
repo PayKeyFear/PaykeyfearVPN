@@ -50,6 +50,22 @@
     native <methods>;
 }
 
+# ---------- gomobile umbrella native backend ----------
+# The umbrella .aar (paykeyfearnative) is referenced exclusively through
+# reflection (AwgNative / VlessNative / Hysteria2Native / NativeBackendVersions
+# all use Class.forName). Without explicit keeps R8 strips the whole
+# package, which also strips go.Seq's static initializer — the one that
+# calls System.loadLibrary("gojni"). In that state tunneling silently
+# degrades to "tun up, no packets" and disconnect can't release the fd.
+-keep class paykeyfearnative.** { *; }
+-keep interface paykeyfearnative.** { *; }
+-keep class go.** { *; }
+-keep interface go.** { *; }
+-keep class mobile.** { *; }
+-dontwarn go.**
+-dontwarn paykeyfearnative.**
+-dontwarn mobile.**
+
 # ---------- App entry points (manifest-referenced) ----------
 -keep class com.paykeyfear.vpn.PaykeyfearApp { *; }
 -keep class com.paykeyfear.vpn.MainActivity { *; }
