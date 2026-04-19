@@ -114,6 +114,13 @@ jobs:
           if ! grep -q 'jni/arm64-v8a/libgojni.so' /tmp/aar.list; then
             echo "::error::umbrella .aar missing jni/arm64-v8a/libgojni.so"; exit 1
           fi
+          # After explode_bundle() has run, the pieces must be present
+          # in the exact paths :app is going to consume them from.
+          jar=app/libs/paykeyfearnative.jar
+          so=app/src/main/jniLibs/arm64-v8a/libgojni.so
+          [ -f "$jar" ] || { echo "::error::Missing $jar"; exit 1; }
+          [ -f "$so" ]  || { echo "::error::Missing $so"; exit 1; }
+          ls -la "$jar" "$so"
 
       - name: Decode keystore (if provided)
         id: keystore

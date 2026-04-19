@@ -121,17 +121,22 @@ dependencies {
     implementation(project(":protocols:vless"))
     implementation(project(":protocols:hysteria2"))
 
-    // Umbrella native backend .aar (awg + vless + hysteria2 combined,
-    // see third_party/gomobile-bundle). Dropped into
-    // protocols/awg/libs/paykeyfearnative.aar by scripts/build-native.sh
-    // and exposed as a flatDir maven repo in settings.gradle.kts.
+    // Umbrella native backend (awg + vless + hysteria2 combined,
+    // see third_party/gomobile-bundle). scripts/build-native.sh
+    // explodes the gomobile-bind .aar into:
+    //   app/libs/paykeyfearnative.jar           <- pure Java classes
+    //   app/src/main/jniLibs/<abi>/libgojni.so  <- one .so per ABI
     //
-    // Don't use `fileTree(*.aar)` here: AGP 8.x technically accepts it
-    // but does NOT run the .aar through its packaging transforms, so
-    // jniLibs/*.so + AndroidManifest pieces are silently dropped from
-    // the final APK — the reflective `Class.forName` lookup then fails
-    // at runtime and every protocol degrades to noop ("not bundled").
-    implementation(group = "", name = "paykeyfearnative", ext = "aar")
+    // Why explode instead of consuming the .aar directly?
+    //   AGP 8.x silently drops pieces of locally-resolved .aar files
+    //   (both `fileTree(*.aar)` on :app and a flatDir + named-dep
+    //   reference observed: classes.jar reaches compile but jniLibs
+    //   never make it into the APK, OR vice-versa). Splitting the
+    //   .aar by hand and feeding the parts through AGP's first-class
+    //   `libs/*.jar` + `src/main/jniLibs/<abi>/` paths is what
+    //   wireguard-android, AmneziaVPN-Android and v2rayNG all do
+    //   for the same reason.
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

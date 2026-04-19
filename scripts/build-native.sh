@@ -72,6 +72,50 @@ build_bundle() {
         "$ROOT/protocols/hysteria2/libs/hysteria.aar"
 
     echo "✓ built $out"
+
+    explode_bundle "$out"
+}
+
+# AGP 8.x is unreliable about merging classes.jar from local .aar files
+# (both `fileTree(*.aar)` on :app and flatDir+implementation(name=...)
+# silently drop the inner classes.jar in some configurations — only
+# the .so files reach the APK). The wireguard-android / amneziavpn
+# pattern that DOES work in every AGP version: explode the .aar and
+# wire its pieces into a standard Android library module —
+# `classes.jar` as a jar dependency, `jni/<abi>/*.so` as that
+# library's `src/main/jniLibs/<abi>/`. AGP's normal sourceSet handling
+# then packages everything correctly into the final APK.
+explode_bundle() {
+    local aar="$1"
+    local jar_out="$ROOT/app/libs/paykeyfearnative.jar"
+    local jni_root="$ROOT/app/src/main/jniLibs"
+
+    echo "Exploding $aar → :app jar + jniLibs"
+    mkdir -p "$ROOT/app/libs"
+    local tmp
+    tmp="$(mktemp -d)"
+    unzip -q -o "$aar" -d "$tmp"
+
+    if [[ ! -f "$tmp/classes.jar" ]]; then
+        echo "!! $aar has no classes.jar — gomobile bind output is broken"
+        rm -rf "$tmp"
+        return 1
+    fi
+    cp "$tmp/classes.jar" "$jar_out"
+
+    # Wipe the previous abi tree so a removed ABI does not linger.
+    rm -rf "$jni_root"
+    mkdir -p "$jni_root"
+    if [[ -d "$tmp/jni" ]]; then
+        cp -r "$tmp/jni/." "$jni_root/"
+    else
+        echo "!! $aar contains no jni/ directory — native libraries missing"
+        rm -rf "$tmp"
+        return 1
+    fi
+    rm -rf "$tmp"
+
+    echo "✓ exploded to $jar_out + $jni_root/<abi>/libgojni.so"
 }
 
 main() {
