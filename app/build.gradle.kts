@@ -121,6 +121,13 @@ dependencies {
     implementation(project(":protocols:vless"))
     implementation(project(":protocols:hysteria2"))
 
+    // Umbrella native backend .aar (awg + vless + hysteria2 combined,
+    // see third_party/gomobile-bundle). Dropped here by
+    // scripts/build-native.sh. Must live on an *application* module
+    // rather than a library, because AGP forbids direct local .aar
+    // deps on library modules (broken .aar packaging).
+    implementation(fileTree(mapOf("dir" to "${rootProject.projectDir}/protocols/awg/libs", "include" to listOf("*.aar"))))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
