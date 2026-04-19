@@ -1,0 +1,7 @@
+# Built amneziawg-go .so files go into ABI-specific subfolders here:
+#   arm64-v8a/libawg.so
+#   armeabi-v7a/libawg.so
+#   x86_64/libawg.so
+# Build with: gomobile bind -target=android/arm64,android/arm,android/amd64 \
+#             -o protocols/awg/src/main/libs/awg.aar \
+#             github.com/amnezia-vpn/amneziawg-go/...

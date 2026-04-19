@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "gradle: assembleDebug",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["assembleDebug"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "gradle: test (JVM)",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["test"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": {"kind": "test", "isDefault": true},
+      "problemMatcher": []
+    },
+    {
+      "label": "gradle: lint + detekt + ktlint",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["lint", "detekt", "ktlintCheck"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "gradle: connectedDebugAndroidTest",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["connectedDebugAndroidTest"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    }
+  ]
+}

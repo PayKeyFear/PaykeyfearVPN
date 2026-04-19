@@ -1,0 +1,30 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 80
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 8
+  TooManyFunctions:
+    active: true
+    thresholdInClasses: 25
+    thresholdInFiles: 25
+
+style:
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: true
+    max: 5
+  WildcardImport:
+    active: true
+
+naming:
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*|[A-Z][a-zA-Z0-9]*'
+    excludes: ['**/test/**', '**/androidTest/**']

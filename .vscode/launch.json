@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Android App",
+      "type": "android",
+      "request": "attach",
+      "processName": "com.paykeyfear.vpn.debug",
+      "target": "last-used"
+    }
+  ]
+}

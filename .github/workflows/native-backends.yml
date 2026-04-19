@@ -1,0 +1,94 @@
+name: Native backends
+
+# Builds awg.aar / vless.aar / hysteria.aar from the Go wrappers and
+# uploads them as workflow artifacts. Intentionally NOT wired into the
+# regular android-ci.yml because the Go + NDK toolchain adds ~1.5 GB
+# and 5–8 minutes to every CI run.
+#
+# Trigger manually (Actions → "Native backends" → Run workflow) or on
+# changes to the wrapper sources. Download the resulting artifacts and
+# drop them into `protocols/<name>/libs/` locally, or let
+# `assemble-release.yml` produce a fully signed bundle directly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rebuild even if the workspace cache would skip'
+        type: boolean
+        default: false
+  push:
+    paths:
+      - 'third_party/**'
+      - 'scripts/build-native.sh'
+      - '.github/workflows/native-backends.yml'
+
+jobs:
+  build:
+    name: gomobile bind
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          local-cache: true
+
+      - name: Install gomobile
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: gomobile init
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: gomobile init
+
+      - name: Build all .aars
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          chmod +x scripts/build-native.sh
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ./scripts/build-native.sh --force
+          else
+            ./scripts/build-native.sh
+          fi
+
+      - name: Upload awg.aar
+        uses: actions/upload-artifact@v4
+        with:
+          name: awg-aar
+          path: protocols/awg/libs/awg.aar
+          if-no-files-found: error
+
+      - name: Upload vless.aar
+        uses: actions/upload-artifact@v4
+        with:
+          name: vless-aar
+          path: protocols/vless/libs/vless.aar
+          if-no-files-found: error
+
+      - name: Upload hysteria.aar
+        uses: actions/upload-artifact@v4
+        with:
+          name: hysteria-aar
+          path: protocols/hysteria2/libs/hysteria.aar
+          if-no-files-found: error

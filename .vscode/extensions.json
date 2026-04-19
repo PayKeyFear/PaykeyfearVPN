@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "fwcd.kotlin",
+    "mathiasfrohlich.kotlin",
+    "vscjava.vscode-gradle",
+    "vscjava.vscode-java-pack",
+    "redhat.java",
+    "redhat.vscode-xml",
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "nishant.android-xml-tools",
+    "adelphes.android-dev-ext",
+    "DetachHead.basedpyright",
+    "EditorConfig.EditorConfig",
+    "esbenp.prettier-vscode",
+    "streetsidesoftware.code-spell-checker",
+    "GitHub.vscode-github-actions",
+    "eamodio.gitlens"
+  ]
+}

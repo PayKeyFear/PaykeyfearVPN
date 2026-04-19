@@ -1,0 +1,35 @@
+PaykeyfearVPN is licensed under the GNU General Public License v3.0 or later.
+
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Copyright (C) 2026 Vladislav Baklashov
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/gpl-3.0.txt>.
+
+---
+
+Full GPL-3.0 text MUST be distributed alongside this file. Before
+publishing any binary (including Play Store uploads), run:
+
+    curl -o LICENSE.gpl-3.0.txt https://www.gnu.org/licenses/gpl-3.0.txt
+
+and commit the result. The short notice above alone does NOT satisfy
+the redistribution clause — Section 4 requires "a copy of this License".
+
+## Why GPL-3.0
+
+This project bundles `amneziawg-go` (GPL-3.0) under `protocols/awg/`.
+GPL-3.0's copyleft clause requires the combined work to be distributed
+under the same license. See `docs/NATIVE_BACKENDS.md` for the full
+third-party license rollup.

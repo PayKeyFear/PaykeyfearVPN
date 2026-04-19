@@ -1,0 +1,50 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+.kotlin/
+
+# Gradle
+**/build/
+!src/**/build/
+gradle-app.setting
+.gradletasknamecache
+
+# Test reports
+/**/reports/
+/**/test-results/
+
+# Native libraries built locally
+/protocols/**/src/main/jniLibs/*/
+/protocols/**/go-build/
+
+# VSCode user-local
+.vscode/*.log
+.vscode/ipch/
+
+# OS
+Thumbs.db
+
+# Release signing — NEVER commit
+/keystore.properties
+*.jks
+*.keystore
+
+# Upstream Go clones produced by scripts/build-native.sh
+/vendor/
