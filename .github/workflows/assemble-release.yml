@@ -49,12 +49,24 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Set up Android NDK
+      - name: Install Android NDK r26d
         id: ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26d
-          local-cache: true
+        # nttld/setup-ndk ships broken clang wrappers on ubuntu-latest
+        # (the toolchain shim scripts reference ./clang relative to a
+        # different layout than what actually gets extracted — gomobile
+        # bind dies with "No such file or directory" on first invocation
+        # of armv7a-linux-androideabi26-clang). Use sdkmanager instead:
+        # it always installs the official NDK in a well-known location
+        # under $ANDROID_HOME/ndk/<version>.
+        run: |
+          set -euo pipefail
+          NDK_VERSION=26.3.11579264
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;${NDK_VERSION}"
+          NDK_PATH="$ANDROID_HOME/ndk/${NDK_VERSION}"
+          test -x "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          echo "ndk-path=$NDK_PATH" >> "$GITHUB_OUTPUT"
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK_PATH" >> "$GITHUB_ENV"
 
       - name: Cache Gradle
         uses: actions/cache@v4
