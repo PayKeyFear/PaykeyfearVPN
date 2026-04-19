@@ -105,6 +105,45 @@ main() {
     build_awg
     build_vless
     build_hysteria
+    dedupe_go_runtime
+}
+
+# gomobile bakes a copy of the Go runtime support classes (`go.Seq`,
+# `go.Universe`, `go.error`, `mobile.*`) into every .aar it produces.
+# Shipping two or more such .aars in the same Android app trips
+# `:app:checkReleaseDuplicateClasses` with hundreds of "Duplicate class
+# go.Seq" lines.
+#
+# Workaround: keep the runtime in awg.aar (the canonical owner — it
+# lands first in the dep graph) and strip the `go/` and `mobile/`
+# packages from classes.jar in the other two .aars. The native .so
+# libraries inside `jni/<abi>/libgojni.so` stay in each .aar — they're
+# loaded by name from each module's own JNI_OnLoad and don't collide.
+dedupe_go_runtime() {
+    command -v jar  >/dev/null 2>&1 || { echo "!! 'jar' (JDK) required for dedupe"; return 1; }
+    command -v zip  >/dev/null 2>&1 || { echo "!! 'zip' required for dedupe"; return 1; }
+    command -v unzip>/dev/null 2>&1 || { echo "!! 'unzip' required for dedupe"; return 1; }
+    for aar in \
+        "$ROOT/protocols/vless/libs/vless.aar" \
+        "$ROOT/protocols/hysteria2/libs/hysteria.aar"; do
+        if [[ ! -f "$aar" ]]; then continue; fi
+        echo "→ stripping shared gomobile runtime classes from $(basename "$aar")"
+        local work
+        work="$(mktemp -d)"
+        ( cd "$work" && unzip -q "$aar" )
+        if [[ -f "$work/classes.jar" ]]; then
+            ( cd "$work" \
+                && mkdir classes-tmp \
+                && ( cd classes-tmp && unzip -q ../classes.jar ) \
+                && rm -rf classes-tmp/go classes-tmp/mobile \
+                && rm -f classes.jar \
+                && ( cd classes-tmp && jar cf ../classes.jar . ) \
+                && rm -rf classes-tmp )
+        fi
+        rm -f "$aar"
+        ( cd "$work" && zip -qr "$aar" . )
+        rm -rf "$work"
+    done
 }
 
 main "$@"
