@@ -61,6 +61,7 @@ build_bundle() {
         && gomobile bind \
             -target="$TARGETS" \
             -androidapi="$ANDROIDAPI" \
+            -ldflags="-checklinkname=0" \
             -o "$out" \
             . )
 
