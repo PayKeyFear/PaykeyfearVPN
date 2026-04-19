@@ -122,11 +122,16 @@ dependencies {
     implementation(project(":protocols:hysteria2"))
 
     // Umbrella native backend .aar (awg + vless + hysteria2 combined,
-    // see third_party/gomobile-bundle). Dropped here by
-    // scripts/build-native.sh. Must live on an *application* module
-    // rather than a library, because AGP forbids direct local .aar
-    // deps on library modules (broken .aar packaging).
-    implementation(fileTree(mapOf("dir" to "${rootProject.projectDir}/protocols/awg/libs", "include" to listOf("*.aar"))))
+    // see third_party/gomobile-bundle). Dropped into
+    // protocols/awg/libs/paykeyfearnative.aar by scripts/build-native.sh
+    // and exposed as a flatDir maven repo in settings.gradle.kts.
+    //
+    // Don't use `fileTree(*.aar)` here: AGP 8.x technically accepts it
+    // but does NOT run the .aar through its packaging transforms, so
+    // jniLibs/*.so + AndroidManifest pieces are silently dropped from
+    // the final APK — the reflective `Class.forName` lookup then fails
+    // at runtime and every protocol degrades to noop ("not bundled").
+    implementation(name = "paykeyfearnative", ext = "aar")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -32,7 +32,9 @@ class AmneziaBundleParser(
 
     override fun canParse(source: ConfigSource): Boolean {
         val text = source.text()?.trim() ?: return false
-        return text.startsWith(SCHEME) || looksLikeJson(text)
+        return text.startsWith(SCHEME) ||
+            looksLikeJson(text) ||
+            looksLikeBareBase64Bundle(text)
     }
 
     override fun parse(source: ConfigSource): ConnectionConfig {
@@ -63,18 +65,39 @@ class AmneziaBundleParser(
         }
     }
 
-    private fun decode(raw: String): String =
+    private fun decode(raw: String): String {
         if (raw.startsWith(SCHEME)) {
             val payload = raw.removePrefix(SCHEME)
-            runCatching { Base64.getUrlDecoder().decode(payload).toString(Charsets.UTF_8) }
-                .getOrElse { runCatching { Base64.getDecoder().decode(payload).toString(Charsets.UTF_8) }.getOrNull() }
+            return tryBase64(payload)
                 ?: throw ConfigParseException("Failed to base64-decode Amnezia bundle")
-        } else {
-            raw
         }
+        if (looksLikeJson(raw)) return raw
+        // Fall back: some QR generators emit the bare base64 payload
+        // without the `vpn://` scheme prefix. AmneziaVPN's desktop apps
+        // accept both forms, so we should too — otherwise users scan a
+        // QR and get "no parser recognised config".
+        return tryBase64(raw)
+            ?: throw ConfigParseException("Bundle is neither JSON nor base64")
+    }
+
+    private fun tryBase64(payload: String): String? {
+        val stripped = payload.replace("\\s".toRegex(), "")
+        return runCatching { Base64.getUrlDecoder().decode(stripped).toString(Charsets.UTF_8) }
+            .recoverCatching { Base64.getDecoder().decode(stripped).toString(Charsets.UTF_8) }
+            .getOrNull()
+            ?.takeIf { it.contains("\"containers\"") }
+    }
 
     private fun looksLikeJson(text: String): Boolean =
         text.startsWith('{') && text.contains("\"containers\"")
+
+    private fun looksLikeBareBase64Bundle(text: String): Boolean {
+        if (text.length < 32) return false
+        // Quick rejection: base64 is restricted to [A-Za-z0-9+/=_-] (URL
+        // or standard alphabet); anything else is something else.
+        if (!BASE64_RE.matches(text)) return false
+        return tryBase64(text) != null
+    }
 
     private val kotlinx.serialization.json.JsonPrimitive.contentOrNull: String?
         get() = runCatching { content }.getOrNull()
@@ -87,5 +110,6 @@ class AmneziaBundleParser(
 
     private companion object {
         const val SCHEME = "vpn://"
+        val BASE64_RE = Regex("^[A-Za-z0-9+/_=-]+$")
     }
 }

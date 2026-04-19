@@ -103,6 +103,17 @@ jobs:
             exit 1
           fi
           ls -la "$aar"
+          # Sanity-check the .aar actually contains the bundle class +
+          # native libs. If gomobile silently produced an empty .aar
+          # (we saw this when a sub-module's go.mod tidy failed) the
+          # APK will still build but every protocol will noop on-device.
+          unzip -l "$aar" | tee /tmp/aar.list
+          if ! grep -q 'classes.jar' /tmp/aar.list; then
+            echo "::error::umbrella .aar missing classes.jar"; exit 1
+          fi
+          if ! grep -q 'jni/arm64-v8a/libgojni.so' /tmp/aar.list; then
+            echo "::error::umbrella .aar missing jni/arm64-v8a/libgojni.so"; exit 1
+          fi
 
       - name: Decode keystore (if provided)
         id: keystore
@@ -130,6 +141,35 @@ jobs:
           PAYKEYFEAR_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           PAYKEYFEAR_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew :app:bundleRelease :app:assembleRelease --no-daemon
+
+      - name: Verify native libs packaged into APK
+        run: |
+          set -e
+          apk=$(ls app/build/outputs/apk/release/*.apk | head -n1)
+          echo "Inspecting $apk"
+          unzip -l "$apk" | tee /tmp/apk.list
+          if ! grep -q 'lib/arm64-v8a/libgojni.so' /tmp/apk.list; then
+            echo "::error::libgojni.so not in APK — native backends will noop"
+            exit 1
+          fi
+          # The umbrella bundle class must survive R8. If this grep
+          # fails, the APK will build but every protocol will fall
+          # back to noop on-device (what commit b51dd86 tried to fix).
+          if ! unzip -p "$apk" classes.dex | strings | grep -q paykeyfearnative/Paykeyfearnative; then
+            # Multi-dex: scan every classes*.dex. `strings` works even
+            # on raw dex bytes.
+            found=0
+            for d in $(unzip -Z1 "$apk" 'classes*.dex'); do
+              if unzip -p "$apk" "$d" | strings | grep -q paykeyfearnative/Paykeyfearnative; then
+                found=1; break
+              fi
+            done
+            if [ "$found" != "1" ]; then
+              echo "::error::paykeyfearnative.Paykeyfearnative not found in any DEX"
+              exit 1
+            fi
+          fi
+          echo "✓ APK contains native backend"
 
       - name: Upload bundle + APK
         uses: actions/upload-artifact@v4

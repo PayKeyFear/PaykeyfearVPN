@@ -71,5 +71,15 @@ class AmneziaBundleParserTest {
         assertThat(parsed.endpoint.host).isEqualTo("h")
     }
 
+    @Test
+    fun `accepts bare base64 bundle without vpn scheme`() {
+        val inner = """{"defaultContainer":"amnezia-hysteria","description":"X","containers":[{"container":"amnezia-hysteria","last_config":"server: h:443\nauth: pw"}]}"""
+        val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(inner.toByteArray())
+        val src = ConfigSource.Text("src", encoded)
+        assertThat(parser.canParse(src)).isTrue()
+        val parsed = parser.parse(src) as ConnectionConfig.Hysteria2
+        assertThat(parsed.password).isEqualTo("pw")
+    }
+
     private fun escape(inner: String): String = "\"${inner.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")}\""
 }

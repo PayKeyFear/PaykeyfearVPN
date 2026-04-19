@@ -46,7 +46,14 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
 
     val qrScanner =
         rememberLauncherForActivityResult(ScanContract()) { result ->
-            result.contents?.takeIf { it.isNotBlank() }?.let(viewModel::onTextChanged)
+            result.contents?.takeIf { it.isNotBlank() }?.let { scanned ->
+                // Treat QR contents as the user's import payload AND
+                // immediately kick off the import — without this the
+                // happy path requires an extra "Import" button tap that
+                // testers consistently miss after scanning.
+                viewModel.onTextChanged(scanned)
+                viewModel.onImportClicked()
+            }
         }
 
     // Build the scan options once — we re-use them whether the camera
@@ -62,7 +69,7 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
             // (combined with the missing CAMERA permission) made the
             // scanner appear as a frozen sideways preview.
             .setOrientationLocked(true)
-            .setCaptureActivity(com.journeyapps.barcodescanner.CaptureActivity::class.java)
+            .setCaptureActivity(PortraitCaptureActivity::class.java)
             .setPrompt(context.getString(R.string.import_scan_prompt))
         qrScanner.launch(opts)
     }
