@@ -1,13 +1,20 @@
 package com.paykeyfear.vpn.core.logging
 
 import com.google.common.truth.Truth.assertThat
+import org.junit.After
 import org.junit.Test
 import timber.log.Timber
 
 class VpnLoggerTest {
+    @After
+    fun tearDown() {
+        // Each test in this file plants/uproots Timber trees; never leak
+        // them across tests in the same JVM (Gradle reuses the daemon).
+        Timber.uprootAll()
+    }
+
     @Test
     fun `install plants ring buffer exactly once and captures messages`() {
-        // Clean up any residual trees from other tests in the same JVM.
         Timber.uprootAll()
         VpnLogger.install(debug = false)
         VpnLogger.install(debug = false) // should be idempotent
@@ -24,24 +31,37 @@ class VpnLoggerTest {
 
         val ringTrees = Timber.forest().filterIsInstance<RingBufferTree>()
         assertThat(ringTrees).hasSize(1)
-        Timber.uprootAll()
     }
 
     @Test
     fun `ring buffer discards oldest entries beyond capacity`() {
+        // Drive the tree through Timber's public API rather than calling
+        // its protected `log` method directly. Some Timber versions wrap
+        // the protected leaf with `prepareLog`, which may or may not
+        // forward depending on internal state — going through Timber.tag
+        // exercises the real production path.
+        Timber.uprootAll()
         val tree = RingBufferTree(capacity = 3)
-        tree.log(4, "T", "a", null)
-        tree.log(4, "T", "b", null)
-        tree.log(4, "T", "c", null)
-        tree.log(4, "T", "d", null)
+        Timber.plant(tree)
+
+        Timber.tag("T").i("a")
+        Timber.tag("T").i("b")
+        Timber.tag("T").i("c")
+        Timber.tag("T").i("d")
+
         val msgs = tree.entries.value.map { it.message }
         assertThat(msgs).containsExactly("b", "c", "d").inOrder()
     }
 
     @Test
     fun `clear empties the buffer`() {
+        Timber.uprootAll()
         val tree = RingBufferTree(capacity = 5)
-        tree.log(4, "T", "x", null)
+        Timber.plant(tree)
+
+        Timber.tag("T").i("x")
+        assertThat(tree.entries.value).hasSize(1)
+
         tree.clear()
         assertThat(tree.entries.value).isEmpty()
     }
