@@ -10,6 +10,6 @@ require (
 	github.com/apernet/hysteria/extras/v2 v2.6.0
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/xjasonlyu/tun2socks/v2 v2.5.2
-	golang.org/x/mobile v0.0.0-20240916200251-e3142cf09c44
+	golang.org/x/mobile v0.0.0-20260209194423-923679eb55af
 	gopkg.in/yaml.v3 v3.0.1
 )

@@ -14,5 +14,5 @@ go 1.22
 require (
 	github.com/xjasonlyu/tun2socks/v2 v2.5.2
 	github.com/xtls/xray-core v1.8.23
-	golang.org/x/mobile v0.0.0-20240916200251-e3142cf09c44
+	golang.org/x/mobile v0.0.0-20260209194423-923679eb55af
 )
