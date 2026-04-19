@@ -13,3 +13,11 @@ require (
 	golang.org/x/mobile v0.0.0-20260209203831-923679eb55af
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+// gvisor's pkg/sync uses go:linkname to pull goready/gopark/semacquire out
+// of the Go runtime. The release pulled transitively by tun2socks v2.5.2
+// (2023-06-03) predates the Go 1.21 runtime rename and fails to compile
+// on go 1.25 with `undefined: goready`. Force a later gvisor snapshot
+// (2023-12-02) that adjusted these linknames — same one xray-core pulls
+// in the vless module, so no behavioural divergence.
+replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20231202080848-1f7806d17489
