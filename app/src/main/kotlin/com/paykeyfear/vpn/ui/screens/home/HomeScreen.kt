@@ -327,7 +327,7 @@ private fun ConnectCircle(
 
     Box(
         modifier = modifier
-            .size(360.dp)
+            .size(220.dp)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
@@ -386,7 +386,7 @@ private fun ConnectCircle(
                 contentDescription = null,
                 tint = animatedColor,
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(60.dp)
                     .graphicsLayer(scaleX = lockScale, scaleY = lockScale),
             )
         }
