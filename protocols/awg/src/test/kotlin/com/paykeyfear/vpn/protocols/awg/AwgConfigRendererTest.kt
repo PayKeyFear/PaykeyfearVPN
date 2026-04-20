@@ -40,7 +40,8 @@ class AwgConfigRendererTest {
         assertThat(out).contains("preshared_key=$pskHex")
         assertThat(out).contains("endpoint=198.51.100.7:51820")
         assertThat(out).contains("persistent_keepalive_interval=25")
-        assertThat(out).contains("mtu=1420")
+        // MTU is applied via VpnService.Builder.setMtu, not via IpcSet
+        assertThat(out).doesNotContain("mtu=")
         assertThat(out).contains("jc=4")
         assertThat(out).contains("h4=4")
         assertThat(out).contains("allowed_ip=0.0.0.0/0")
