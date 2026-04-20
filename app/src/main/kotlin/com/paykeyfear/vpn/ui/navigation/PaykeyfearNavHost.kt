@@ -71,7 +71,9 @@ fun PaykeyfearNavHost() {
             startDestination = Destination.Home.route,
             modifier = androidx.compose.ui.Modifier.padding(padding),
         ) {
-            composable(Destination.Home.route) { HomeScreen() }
+            composable(Destination.Home.route) {
+                HomeScreen(onSplitTunnelClick = { navController.navigate(Destination.SplitTunnel.route) })
+            }
             composable(Destination.Servers.route) { ServersScreen() }
             composable(Destination.Import.route) { ImportScreen() }
             composable(Destination.Settings.route) {
@@ -82,10 +84,10 @@ fun PaykeyfearNavHost() {
                     onAboutClick = { navController.navigate(Destination.About.route) },
                 )
             }
-            composable(Destination.SplitTunnel.route) { SplitTunnelScreen() }
-            composable(Destination.Privacy.route) { PrivacyPolicyScreen() }
-            composable(Destination.Logs.route) { LogsScreen() }
-            composable(Destination.About.route) { AboutScreen() }
+            composable(Destination.SplitTunnel.route) { SplitTunnelScreen(onBack = navController::popBackStack) }
+            composable(Destination.Privacy.route) { PrivacyPolicyScreen(onBack = navController::popBackStack) }
+            composable(Destination.Logs.route) { LogsScreen(onBack = navController::popBackStack) }
+            composable(Destination.About.route) { AboutScreen(onBack = navController::popBackStack) }
         }
     }
 }
