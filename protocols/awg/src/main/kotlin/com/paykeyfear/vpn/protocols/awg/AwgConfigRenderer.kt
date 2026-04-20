@@ -30,10 +30,26 @@ object AwgConfigRenderer {
                 jmax?.let { appendLine("jmax=$it") }
                 s1?.let { appendLine("s1=$it") }
                 s2?.let { appendLine("s2=$it") }
+                // Pass magic headers through verbatim — amneziawg-go v0.2.17
+                // accepts both single uint32 and "start-end" ranges natively
+                // and validates incoming packets across the whole range.
                 h1?.let { appendLine("h1=$it") }
                 h2?.let { appendLine("h2=$it") }
                 h3?.let { appendLine("h3=$it") }
                 h4?.let { appendLine("h4=$it") }
+                i1?.let { appendLine("i1=$it") }
+                i2?.let { appendLine("i2=$it") }
+                i3?.let { appendLine("i3=$it") }
+                i4?.let { appendLine("i4=$it") }
+                i5?.let { appendLine("i5=$it") }
+                // j1-j3 + itime are AmneziaWG 2.0-only UAPI keys (amneziawg-go
+                // v1.0.0+). The v0.2.17 backend we currently ship rejects
+                // unknown keys, so we drop them silently here. If we later
+                // bump amneziawg-go past v1.0, uncomment these lines.
+                // j1?.let { appendLine("j1=$it") }
+                // j2?.let { appendLine("j2=$it") }
+                // j3?.let { appendLine("j3=$it") }
+                // itime?.let { appendLine("itime=$it") }
             }
             appendLine("public_key=${toHexKey(config.peerPublicKey)}")
             config.presharedKey?.let { appendLine("preshared_key=${toHexKey(it)}") }

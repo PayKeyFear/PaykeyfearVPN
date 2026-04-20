@@ -72,12 +72,19 @@ class TunnelControllerTest {
     }
 
     @Test
-    fun `start twice without stop throws`() = runTest {
-        val controller = TunnelController(mapOf(Protocol.AWG to stubTunnel()))
+    fun `start twice auto-stops the prior tunnel`() = runTest {
+        val tunnel = mockk<VpnTunnel>(relaxed = true)
+        every { tunnel.supportedProtocol } returns Protocol.AWG
+        coEvery { tunnel.start(any(), any(), any()) } returns Unit
+
+        val controller = TunnelController(mapOf(Protocol.AWG to tunnel))
         controller.start(awgConfig, 1)
-        assertThrows(IllegalStateException::class.java) {
-            kotlinx.coroutines.runBlocking { controller.start(awgConfig, 1) }
-        }
+        controller.start(awgConfig, 2)
+
+        assertThat(controller.state.value).isInstanceOf(TunnelState.Connected::class.java)
+        // Prior tunnel was stopped once (auto-stop) before the second start.
+        coVerify(exactly = 1) { tunnel.stop() }
+        coVerify(exactly = 2) { tunnel.start(any(), any(), any()) }
     }
 
     @Test

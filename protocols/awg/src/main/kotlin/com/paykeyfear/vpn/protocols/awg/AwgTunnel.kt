@@ -32,6 +32,7 @@ class AwgTunnel(
         }
         native.installProtector(protector)
         val rendered = AwgConfigRenderer.render(config)
+        Timber.tag(TAG).i("AWG config summary: %s", summarize(config, rendered))
         handle = native.start(rendered, tunFd)
         if (handle == INVALID_HANDLE) {
             val why = native.lastError().ifBlank { "no error reported" }
@@ -83,6 +84,31 @@ class AwgTunnel(
         override fun stats(handle: Long): LongArray = AwgNative.getStats(handle)
 
         override fun lastError(): String = AwgNative.lastError()
+    }
+
+    private fun summarize(config: ConnectionConfig.Awg, rendered: String): String {
+        // Dump the UAPI-key checklist so we can tell at a glance which
+        // AmneziaWG junk/header fields actually reached the device. Never
+        // log the rendered config directly — it contains private_key.
+        val j = config.junk
+        val hasLine = { k: String -> rendered.lineSequence().any { it.startsWith("$k=") } }
+        return buildString {
+            append("endpoint=").append(config.endpoint.host).append(':').append(config.endpoint.port)
+            append(" peerPubKeySet=").append(config.peerPublicKey.isNotBlank())
+            append(" psk=").append(config.presharedKey != null)
+            append(" addrs=").append(config.addresses.size)
+            append(" allowed=").append(config.allowedIps.size)
+            append(" mtu=").append(config.mtu ?: "default")
+            append(" keepalive=").append(config.persistentKeepalive ?: "none")
+            append(" jc=").append(j.jc).append(" jmin=").append(j.jmin).append(" jmax=").append(j.jmax)
+            append(" s1=").append(j.s1).append(" s2=").append(j.s2)
+            append(" h=").append(listOf(j.h1, j.h2, j.h3, j.h4).count { !it.isNullOrBlank() }).append("/4")
+            append(" i=").append(listOf(j.i1, j.i2, j.i3, j.i4, j.i5).count { !it.isNullOrBlank() }).append("/5")
+            append(" jN=").append(listOf(j.j1, j.j2, j.j3).count { !it.isNullOrBlank() }).append("/3")
+            append(" itime=").append(j.itime)
+            append(" rendered[h1-h4]=")
+            append(if (hasLine("h1") && hasLine("h2") && hasLine("h3") && hasLine("h4")) "all" else "MISSING")
+        }
     }
 
     companion object {

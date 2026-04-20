@@ -1,6 +1,6 @@
 module github.com/paykeyfear/gomobile-bundle
 
-go 1.24.0
+go 1.24.4
 
 // Single-output umbrella module — see bundle.go for the full rationale.
 //
@@ -17,7 +17,7 @@ require (
 	github.com/Dreamacro/go-shadowsocks2 v0.1.8 // indirect
 	github.com/OmarTariq612/goech v0.0.0-20240405204721-8e2e1dafd3a0 // indirect
 	github.com/ajg/form v1.5.1 // indirect
-	github.com/amnezia-vpn/amneziawg-go v0.2.12 // indirect
+	github.com/amnezia-vpn/amneziawg-go v0.2.17 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/apernet/hysteria/core/v2 v2.6.0 // indirect
 	github.com/apernet/hysteria/extras/v2 v2.6.0 // indirect
@@ -33,7 +33,7 @@ require (
 	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-chi/render v1.0.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/google/btree v1.1.2 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/google/pprof v0.0.0-20240528025155-186aa0362fba // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
@@ -52,8 +52,7 @@ require (
 	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
-	github.com/tevino/abool/v2 v2.1.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20230316163032-ced5aaba43e3 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
@@ -71,7 +70,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
+	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
@@ -80,7 +79,7 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gvisor.dev/gvisor v0.0.0-20231202080848-1f7806d17489 // indirect
+	gvisor.dev/gvisor v0.0.0-20250606233247-e3c4c4cad86f // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 

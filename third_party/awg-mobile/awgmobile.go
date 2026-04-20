@@ -14,14 +14,11 @@
 package awgmobile
 
 import (
-	"context"
 	"fmt"
-	"net"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 
 	"github.com/amnezia-vpn/amneziawg-go/conn"
 	"github.com/amnezia-vpn/amneziawg-go/device"
@@ -52,8 +49,10 @@ func SetProtector(p Protector) {
 
 func Start(cfg string, tunFd int32) int32 {
 	// The Java side calls ParcelFileDescriptor.detachFd() before passing
-	// the fd to us, so we are the sole owner. No dup needed; on any
-	// failure path we close it ourselves.
+	// the fd to us, so we are the sole owner. On any failure path Go
+	// closes the fd (directly or via dev.Close → tun.Close), so the
+	// Kotlin caller must NOT close it again — double-close triggers
+	// fdsan SIGABRT when the OS recycles the fd number.
 	fd := int(tunFd)
 	_ = unix.SetNonblock(fd, true)
 
@@ -68,8 +67,11 @@ func Start(cfg string, tunFd int32) int32 {
 		return -1
 	}
 
-	logger := device.NewLogger(device.LogLevelError, "[awg] ")
-	bind := conn.NewDefaultBind()
+	// LogLevelVerbose is too chatty for steady-state; Info gives us
+	// handshake/keepalive lines that are invaluable for diagnosing
+	// "no traffic" issues without drowning logcat.
+	logger := device.NewLogger(device.LogLevelVerbose, "[awg] ")
+	bind := newProtectedBind(logger)
 	dev := device.NewDevice(tdev, bind, logger)
 
 	if err := dev.IpcSet(cfg); err != nil {
@@ -83,29 +85,72 @@ func Start(cfg string, tunFd int32) int32 {
 		return -1
 	}
 
-	// Wireguard-android pattern: once the bind has opened its sockets,
-	// peek their fds and route them through VpnService.protect() so the
-	// AWG handshake/keepalive UDP packets bypass our own tun (otherwise
-	// they loop and no traffic flows at all).
-	protectBindSockets(bind)
-
 	h := &awgHandle{device: dev, bind: bind}
 	id := int32(handleCounter.Add(1))
 	handles.Store(id, h)
+	logger.Verbosef("tunnel up (handle=%d)", id)
 	return id
 }
 
-func protectBindSockets(bind conn.Bind) {
-	pb, ok := bind.(conn.PeekLookAtSocketFd)
+// protectedBind wraps *conn.StdNetBind so that every UDP socket the bind
+// opens is immediately handed to VpnService.protect(). Without this the
+// handshake / keepalive packets go out through our own tun and loop; no
+// data can ever flow because the peer never sees a handshake response.
+//
+// The protect-at-Open hook also covers reconnect: when the device roams
+// between networks, amneziawg-go closes and re-opens the bind and we
+// protect the fresh sockets before the next handshake is sent.
+type protectedBind struct {
+	*conn.StdNetBind
+	logger *device.Logger
+}
+
+func newProtectedBind(logger *device.Logger) *protectedBind {
+	inner := conn.NewStdNetBind()
+	std, ok := inner.(*conn.StdNetBind)
 	if !ok {
-		return
+		// Should never happen on android (default.go returns StdNetBind);
+		// fall back to the naked inner so we at least have *a* bind, and
+		// log so the failure is visible instead of mysterious no-traffic.
+		logger.Errorf("unexpected bind type %T — protect hook disabled", inner)
+		return &protectedBind{StdNetBind: nil, logger: logger}
 	}
+	return &protectedBind{StdNetBind: std, logger: logger}
+}
+
+func (b *protectedBind) Open(port uint16) ([]conn.ReceiveFunc, uint16, error) {
+	if b.StdNetBind == nil {
+		return nil, 0, fmt.Errorf("protectedBind: inner bind unavailable")
+	}
+	fns, actualPort, err := b.StdNetBind.Open(port)
+	if err != nil {
+		return fns, actualPort, err
+	}
+	b.protectSockets()
+	return fns, actualPort, nil
+}
+
+func (b *protectedBind) protectSockets() {
 	p := currentProtector()
-	if fd, err := pb.PeekLookAtSocketFd4(); err == nil && fd >= 0 {
-		_ = p.Protect(int32(fd))
+	if fd, err := b.StdNetBind.PeekLookAtSocketFd4(); err == nil && fd >= 0 {
+		if !p.Protect(int32(fd)) {
+			b.logger.Errorf("VpnService.protect(v4 fd=%d) returned false — AWG traffic will loop into tun", fd)
+		} else {
+			b.logger.Verbosef("protected v4 fd=%d", fd)
+		}
+	} else if err != nil {
+		b.logger.Errorf("peek v4 fd: %v", err)
 	}
-	if fd, err := pb.PeekLookAtSocketFd6(); err == nil && fd >= 0 {
-		_ = p.Protect(int32(fd))
+	if fd, err := b.StdNetBind.PeekLookAtSocketFd6(); err == nil && fd >= 0 {
+		if !p.Protect(int32(fd)) {
+			b.logger.Errorf("VpnService.protect(v6 fd=%d) returned false", fd)
+		} else {
+			b.logger.Verbosef("protected v6 fd=%d", fd)
+		}
+	} else if err != nil {
+		// v6 not being available is normal on v4-only networks; only log
+		// if the bind claims to have opened a socket that we can't peek.
+		b.logger.Verbosef("peek v6 fd: %v", err)
 	}
 }
 
@@ -150,50 +195,6 @@ func LastError() string {
 		return ""
 	}
 	return v.(string)
-}
-
-// ----------------------------------------------------------------------------
-// Protected UDP listener (exported for the future custom Bind integration)
-// ----------------------------------------------------------------------------
-
-// protectedListenUDP opens a UDP socket whose fd is passed through the
-// currently-installed Protector before any packets are sent. Used by the
-// (future) protected Bind wrapper. Lower-case so gomobile bind doesn't
-// try to expose the *net.UDPConn return type to Java.
-//
-// NOTE: amneziawg-go's device.NewDevice takes a conn.Bind but
-// conn.StdNetBind does not expose its sockets, so we cannot retro-fit
-// protect() onto the default bind. A follow-up change will replace
-// NewDefaultBind with a protected wrapper. Until then, SetProtector only
-// influences sockets opened via this helper (currently none during
-// Start — the default bind still owns them) and the upstream race
-// documented in AwgTunnel.kt:21 remains present on first connect of a
-// freshly booted device.
-func protectedListenUDP(network, addr string) (*net.UDPConn, error) {
-	lc := &net.ListenConfig{
-		Control: func(_ string, _ string, c syscall.RawConn) error {
-			p := currentProtector()
-			var protectErr error
-			if err := c.Control(func(fd uintptr) {
-				if !p.Protect(int32(fd)) {
-					protectErr = fmt.Errorf("VpnService.protect(%d) returned false", fd)
-				}
-			}); err != nil {
-				return err
-			}
-			return protectErr
-		},
-	}
-	pc, err := lc.ListenPacket(context.Background(), network, addr)
-	if err != nil {
-		return nil, err
-	}
-	uc, ok := pc.(*net.UDPConn)
-	if !ok {
-		_ = pc.Close()
-		return nil, fmt.Errorf("expected *net.UDPConn, got %T", pc)
-	}
-	return uc, nil
 }
 
 // ----------------------------------------------------------------------------

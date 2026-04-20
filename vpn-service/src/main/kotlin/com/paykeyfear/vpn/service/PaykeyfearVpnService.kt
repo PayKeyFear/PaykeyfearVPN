@@ -185,31 +185,21 @@ class PaykeyfearVpnService : VpnService() {
             }
             // detachFd() releases the JVM wrapper's ownership of the fd;
             // we then immediately close the (now empty) PFD. From this
-            // point on, the fd is owned exclusively by the native backend
-            // and will be closed when the backend's stop() runs.
+            // point on, the fd is owned exclusively by the native backend,
+            // which closes it in both success (Stop) and failure (Start
+            // error path) paths. We must NOT close it from Kotlin — the
+            // fd number may already be recycled, and a double-close trips
+            // fdsan with SIGABRT on the binder thread.
             val nativeFd = pfd.detachFd()
             runCatching { pfd.close() }
             runCatching { controller.start(config, nativeFd, protector()) }.onFailure {
                 Timber.e(it, "Tunnel failed")
-                // Native didn't take ownership — close the fd ourselves.
-                runCatching { android.system.Os.close(java.io.FileDescriptor().apply { setIntFd(nativeFd) }) }
                 stopSelf()
             }
         }
     }
 
     private fun protector(): Protector = Protector { fd -> protect(fd) }
-
-    /**
-     * Reflective shim — `FileDescriptor.setInt$` is hidden but stable; we
-     * need it to close a raw int fd via [android.system.Os.close] on the
-     * tunnel-start failure path.
-     */
-    private fun java.io.FileDescriptor.setIntFd(fd: Int) {
-        val m = java.io.FileDescriptor::class.java.getDeclaredMethod("setInt\$", Int::class.javaPrimitiveType)
-        m.isAccessible = true
-        m.invoke(this, fd)
-    }
 
     private fun registerNetworkCallback() {
         if (networkCallbackRegistered) return

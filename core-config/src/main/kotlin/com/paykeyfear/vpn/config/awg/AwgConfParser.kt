@@ -68,10 +68,19 @@ class AwgConfParser : ConfigParser {
                 jmax = iface["jmax"]?.toIntOrNull(),
                 s1 = iface["s1"]?.toIntOrNull(),
                 s2 = iface["s2"]?.toIntOrNull(),
-                h1 = iface["h1"]?.toLongOrNull(),
-                h2 = iface["h2"]?.toLongOrNull(),
-                h3 = iface["h3"]?.toLongOrNull(),
-                h4 = iface["h4"]?.toLongOrNull(),
+                h1 = iface["h1"]?.takeIf { it.isNotBlank() },
+                h2 = iface["h2"]?.takeIf { it.isNotBlank() },
+                h3 = iface["h3"]?.takeIf { it.isNotBlank() },
+                h4 = iface["h4"]?.takeIf { it.isNotBlank() },
+                i1 = iface["i1"]?.takeIf { it.isNotBlank() },
+                i2 = iface["i2"]?.takeIf { it.isNotBlank() },
+                i3 = iface["i3"]?.takeIf { it.isNotBlank() },
+                i4 = iface["i4"]?.takeIf { it.isNotBlank() },
+                i5 = iface["i5"]?.takeIf { it.isNotBlank() },
+                j1 = iface["j1"]?.takeIf { it.isNotBlank() },
+                j2 = iface["j2"]?.takeIf { it.isNotBlank() },
+                j3 = iface["j3"]?.takeIf { it.isNotBlank() },
+                itime = iface["itime"]?.toIntOrNull(),
             )
 
         return ConnectionConfig.Awg(

@@ -37,7 +37,7 @@ class AwgConfParserTest {
         assertThat(parsed.mtu).isEqualTo(1380)
         assertThat(parsed.persistentKeepalive).isEqualTo(25)
         assertThat(parsed.junk.jc).isEqualTo(4)
-        assertThat(parsed.junk.h4).isEqualTo(4_234_567_890L)
+        assertThat(parsed.junk.h4).isEqualTo("4234567890")
     }
 
     @Test

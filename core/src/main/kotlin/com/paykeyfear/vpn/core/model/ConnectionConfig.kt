@@ -70,10 +70,26 @@ data class AwgJunkParams(
     val jmax: Int? = null,
     val s1: Int? = null,
     val s2: Int? = null,
-    val h1: Long? = null,
-    val h2: Long? = null,
-    val h3: Long? = null,
-    val h4: Long? = null,
+    // Magic-header specs. In AmneziaWG 1.5 configs they come as ranges
+    // ("743502058-1997075986"); in AWG 2.0 configs they are single uint32
+    // values. Stored as raw strings so the renderer can decide how to
+    // materialize them for the current amneziawg-go backend.
+    val h1: String? = null,
+    val h2: String? = null,
+    val h3: String? = null,
+    val h4: String? = null,
+    // AmneziaWG 2.0 "special" handshake junk expressions. Their grammar
+    // (e.g. "<b 0xAA><c 100><t>") is parsed server-side by amneziawg-go's
+    // awg.Parse; clients just pass them through verbatim.
+    val i1: String? = null,
+    val i2: String? = null,
+    val i3: String? = null,
+    val i4: String? = null,
+    val i5: String? = null,
+    val j1: String? = null,
+    val j2: String? = null,
+    val j3: String? = null,
+    val itime: Int? = null,
 )
 
 @Serializable

@@ -57,7 +57,17 @@ class TunnelController(
 
     suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector = Protector.NOOP) {
         mutex.withLock {
-            check(active == null) { "Tunnel already active; stop() first" }
+            // If a previous start succeeded partially or the caller forgot
+            // to stop first (e.g. a network-change reconnect racing with
+            // user-initiated toggle), stop the active tunnel instead of
+            // throwing. Throwing here bubbles up as an unhandled exception
+            // on the IO dispatcher and crashes the service.
+            active?.let { prior ->
+                runCatching { prior.stop() }.onFailure {
+                    Timber.tag(TAG).w(it, "Stopping stale tunnel before restart")
+                }
+                active = null
+            }
             val tunnel = tunnels[config.protocol]
                 ?: error("No tunnel implementation for protocol ${config.protocol}")
             _state.value = TunnelState.Connecting

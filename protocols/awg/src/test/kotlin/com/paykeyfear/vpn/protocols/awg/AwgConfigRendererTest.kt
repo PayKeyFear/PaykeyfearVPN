@@ -31,7 +31,7 @@ class AwgConfigRendererTest {
             addresses = listOf("10.0.0.2/32"),
             mtu = 1420,
             persistentKeepalive = 25,
-            junk = AwgJunkParams(jc = 4, jmin = 40, jmax = 70, s1 = 50, s2 = 100, h1 = 1, h2 = 2, h3 = 3, h4 = 4),
+            junk = AwgJunkParams(jc = 4, jmin = 40, jmax = 70, s1 = 50, s2 = 100, h1 = "1", h2 = "2", h3 = "3", h4 = "4"),
             allowedIps = listOf("0.0.0.0/0", "::/0"),
         )
         val out = AwgConfigRenderer.render(cfg)

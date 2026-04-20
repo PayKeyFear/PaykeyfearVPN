@@ -56,6 +56,15 @@ internal object AwgJsonToConf {
         obj.str("H2", "h2")?.let { sb.append("H2 = ").append(it).append('\n') }
         obj.str("H3", "h3")?.let { sb.append("H3 = ").append(it).append('\n') }
         obj.str("H4", "h4")?.let { sb.append("H4 = ").append(it).append('\n') }
+        obj.str("I1", "i1")?.let { sb.append("I1 = ").append(it).append('\n') }
+        obj.str("I2", "i2")?.let { sb.append("I2 = ").append(it).append('\n') }
+        obj.str("I3", "i3")?.let { sb.append("I3 = ").append(it).append('\n') }
+        obj.str("I4", "i4")?.let { sb.append("I4 = ").append(it).append('\n') }
+        obj.str("I5", "i5")?.let { sb.append("I5 = ").append(it).append('\n') }
+        obj.str("J1", "j1")?.let { sb.append("J1 = ").append(it).append('\n') }
+        obj.str("J2", "j2")?.let { sb.append("J2 = ").append(it).append('\n') }
+        obj.str("J3", "j3")?.let { sb.append("J3 = ").append(it).append('\n') }
+        obj.str("Itime", "itime", "ITime")?.let { sb.append("Itime = ").append(it).append('\n') }
 
         sb.append('\n').append("[Peer]\n")
         obj.str("server_pub_key", "serverPubKey", "public_key", "publicKey")
