@@ -166,8 +166,6 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
             Text(
                 stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
