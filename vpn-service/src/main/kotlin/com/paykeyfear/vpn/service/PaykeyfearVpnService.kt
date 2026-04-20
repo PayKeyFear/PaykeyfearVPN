@@ -330,24 +330,34 @@ class PaykeyfearVpnService : VpnService() {
             is TunnelState.Error -> state.message
             else -> "Tunnel is ${state.javaClass.simpleName.lowercase()}"
         }
-        nm.notify(NOTIFICATION_ID, buildNotification(title, text))
+        val showStopAction = state is TunnelState.Connected || state == TunnelState.Connecting
+        nm.notify(NOTIFICATION_ID, buildNotification(title, text, showStopAction))
     }
 
-    private fun buildNotification(title: String, text: String): Notification {
+    private fun buildNotification(title: String, text: String, showStopAction: Boolean = false): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
             packageManager.getLaunchIntentForPackage(packageName) ?: Intent(),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
-            .build()
+        if (showStopAction) {
+            val stopPendingIntent = PendingIntent.getService(
+                this,
+                1,
+                buildStopIntent(this),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
+            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", stopPendingIntent)
+        }
+        return builder.build()
     }
 
     private fun formatStats(stats: TunnelStats): String {

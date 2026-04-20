@@ -7,15 +7,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
@@ -39,30 +46,40 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,22 +87,30 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.paykeyfear.vpn.R
 import com.paykeyfear.vpn.core.model.ConnectionConfig
+import com.paykeyfear.vpn.core.model.Protocol
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
 import com.paykeyfear.vpn.core.model.TunnelState
 import com.paykeyfear.vpn.service.PaykeyfearVpnService
 import com.paykeyfear.vpn.viewmodel.HomeEvent
 import com.paykeyfear.vpn.viewmodel.HomeViewModel
+import com.paykeyfear.vpn.viewmodel.ServersViewModel
 import com.paykeyfear.vpn.viewmodel.SplitTunnelViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSplitTunnelClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     splitTunnelViewModel: SplitTunnelViewModel = hiltViewModel(),
+    serversViewModel: ServersViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val event by viewModel.events.collectAsStateWithLifecycle()
     val splitState by splitTunnelViewModel.state.collectAsStateWithLifecycle()
+    val serversState by serversViewModel.state.collectAsStateWithLifecycle()
+
+    var showServerPicker by rememberSaveable { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
 
@@ -122,6 +147,15 @@ fun HomeScreen(
         if (errorMessage != null) snackbar.showSnackbar(errorMessage)
     }
 
+    val view = LocalView.current
+    val isConnected = state.isConnected
+    SideEffect {
+        val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+        val controller = androidx.core.view.WindowInsetsControllerCompat(window, view)
+        window.statusBarColor = if (isConnected) android.graphics.Color.parseColor("#1B5E20") else android.graphics.Color.TRANSPARENT
+        controller.isAppearanceLightStatusBars = !isConnected
+    }
+
     Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { inner ->
         Column(
             modifier = Modifier
@@ -130,6 +164,8 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -163,10 +199,20 @@ fun HomeScreen(
                 ServerInfoCard(
                     serverName = server.displayName,
                     protocol = server.protocol.displayName,
+                    protocolColor = protocolColor(server.protocol),
+                    onClick = { if (state.hasAnyServer) showServerPicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 )
             } ?: run {
-                if (!state.hasAnyServer) {
+                if (state.hasAnyServer) {
+                    ServerInfoCard(
+                        serverName = stringResource(R.string.servers_title),
+                        protocol = "",
+                        protocolColor = MaterialTheme.colorScheme.outline,
+                        onClick = { showServerPicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
                     Text(
                         stringResource(R.string.no_servers),
                         style = MaterialTheme.typography.bodyMedium,
@@ -199,6 +245,22 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+
+        if (showServerPicker) {
+            ModalBottomSheet(
+                onDismissRequest = { showServerPicker = false },
+                sheetState = sheetState,
+            ) {
+                ServerPickerSheet(
+                    servers = serversState.servers,
+                    selectedId = serversState.selectedId,
+                    onSelect = { id ->
+                        serversViewModel.select(id)
+                        showServerPicker = false
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -219,19 +281,55 @@ private fun ConnectCircle(
         isError -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.outline
     }
-    val animatedColor by animateColorAsState(targetColor, tween(600), label = "circle_color")
+    val animatedColor by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = tween(800, easing = EaseInOut),
+        label = "circle_color",
+    )
 
     val infiniteTransition = rememberInfiniteTransition(label = "arc_spin")
+
+    // Дуга крутится плавно
     val arcRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
         label = "arc_rotation",
+    )
+
+    // Длина дуги пульсирует (40° → 260°) — эффект "набегающей волны"
+    val sweepAngle by infiniteTransition.animateFloat(
+        initialValue = 40f,
+        targetValue = 260f,
+        animationSpec = infiniteRepeatable(
+            tween(700, easing = EaseInOutCubic),
+            RepeatMode.Reverse,
+        ),
+        label = "arc_sweep",
+    )
+
+    // Фоновое кольцо плавно появляется/исчезает
+    val ringAlpha by animateFloatAsState(
+        targetValue = if (isConnecting) 0.18f else 0.0f,
+        animationSpec = tween(600),
+        label = "ring_alpha",
+    )
+
+    // Иконка: плавная смена через alpha
+    val lockAlpha by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(500, easing = EaseInOut),
+        label = "lock_alpha",
+    )
+    val lockScale by animateFloatAsState(
+        targetValue = if (isConnecting) 0.85f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "lock_scale",
     )
 
     Box(
         modifier = modifier
-            .size(160.dp)
+            .size(360.dp)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
@@ -242,30 +340,27 @@ private fun ConnectCircle(
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 6.dp.toPx()
-            val inset = strokeWidth / 2f
+            val strokeWidth = 8.dp.toPx()
 
-            // Faint background fill
-            drawCircle(color = animatedColor.copy(alpha = 0.08f))
+            // Фоновый заполненный круг
+            drawCircle(color = animatedColor.copy(alpha = 0.07f))
 
             if (isConnecting) {
-                // Spinning arc — 180° sweep, rotates continuously
-                drawArc(
-                    color = animatedColor.copy(alpha = 0.25f),
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
+                // Тонкое фоновое кольцо
+                drawCircle(
+                    color = animatedColor.copy(alpha = ringAlpha),
                     style = Stroke(width = strokeWidth),
                 )
+                // Движущаяся дуга с переменной длиной — плавнее и живее
                 drawArc(
                     color = animatedColor,
-                    startAngle = arcRotation,
-                    sweepAngle = 180f,
+                    startAngle = arcRotation - sweepAngle / 2f,
+                    sweepAngle = sweepAngle,
                     useCenter = false,
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
                 )
             } else {
-                // Static ring
+                // Статичное кольцо
                 drawCircle(
                     color = animatedColor,
                     style = Stroke(width = strokeWidth),
@@ -278,40 +373,79 @@ private fun ConnectCircle(
             isError -> Icons.Filled.Error
             else -> Icons.Filled.LockOpen
         }
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = animatedColor,
-            modifier = Modifier.size(52.dp),
-        )
+        AnimatedContent(
+            targetState = icon,
+            transitionSpec = {
+                fadeIn(tween(400, easing = EaseInOut)) +
+                    scaleIn(tween(400, easing = EaseInOut), initialScale = 0.75f) togetherWith
+                    fadeOut(tween(250)) +
+                    scaleOut(tween(250), targetScale = 0.75f)
+            },
+            label = "lock_icon",
+        ) { currentIcon ->
+            Icon(
+                imageVector = currentIcon,
+                contentDescription = null,
+                tint = animatedColor,
+                modifier = Modifier
+                    .size(100.dp)
+                    .graphicsLayer(scaleX = lockScale, scaleY = lockScale),
+            )
+        }
     }
+}
+
+@Composable
+private fun protocolColor(protocol: Protocol) = when (protocol) {
+    Protocol.AWG -> Color(0xFF4CAF50)
+    Protocol.VLESS -> Color(0xFF2196F3)
+    Protocol.HYSTERIA2 -> Color(0xFFFF9800)
 }
 
 @Composable
 private fun ServerInfoCard(
     serverName: String,
     protocol: String,
+    protocolColor: Color = MaterialTheme.colorScheme.outline,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                indication = ripple(bounded = true),
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onClick,
+            ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
     ) {
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = serverName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = protocol,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = serverName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (protocol.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = protocol,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = protocolColor,
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -427,4 +561,61 @@ private fun startVpn(context: android.content.Context, config: ConnectionConfig)
 
 private fun stopVpn(context: android.content.Context) {
     context.startService(PaykeyfearVpnService.buildStopIntent(context))
+}
+
+@Composable
+private fun ServerPickerSheet(
+    servers: List<ConnectionConfig>,
+    selectedId: String?,
+    onSelect: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.servers_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        )
+        servers.forEach { server ->
+            val isSelected = server.id == selectedId
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        indication = ripple(bounded = true),
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = { onSelect(server.id) },
+                    )
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = server.displayName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = server.protocol.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+    }
 }

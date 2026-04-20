@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.paykeyfear.vpn.config.ConfigParserRegistry
 import com.paykeyfear.vpn.config.ConfigSource
+import com.paykeyfear.vpn.core.model.ConnectionConfig
+import com.paykeyfear.vpn.core.model.Protocol
 import com.paykeyfear.vpn.data.prefs.PreferencesRepository
 import com.paykeyfear.vpn.data.repository.ConfigRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,11 +16,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class ConfigPreview(
+    val displayName: String,
+    val protocol: Protocol,
+    val host: String,
+    val port: Int,
+)
+
 data class ImportUiState(
     val text: String = "",
     val isImporting: Boolean = false,
     val importedName: String? = null,
     val error: String? = null,
+    val preview: ConfigPreview? = null,
 )
 
 @HiltViewModel
@@ -34,6 +44,26 @@ class ImportViewModel
 
         fun onTextChanged(text: String) {
             _state.update { it.copy(text = text, error = null, importedName = null) }
+            tryPreview(text)
+        }
+
+        private fun tryPreview(text: String) {
+            if (text.isBlank()) {
+                _state.update { it.copy(preview = null) }
+                return
+            }
+            viewModelScope.launch {
+                val preview = runCatching {
+                    val cfg = registry.parse(ConfigSource.Text("preview", text))
+                    ConfigPreview(
+                        displayName = cfg.displayName,
+                        protocol = cfg.protocol,
+                        host = cfg.endpoint.host,
+                        port = cfg.endpoint.port,
+                    )
+                }.getOrNull()
+                _state.update { it.copy(preview = preview) }
+            }
         }
 
         fun onImportClicked() {
@@ -49,7 +79,7 @@ class ImportViewModel
                 _state.update { prev ->
                     result.fold(
                         onSuccess = { cfg ->
-                            prev.copy(isImporting = false, importedName = cfg.displayName, error = null)
+                            prev.copy(isImporting = false, importedName = cfg.displayName, error = null, preview = null, text = "")
                         },
                         onFailure = { err ->
                             prev.copy(isImporting = false, error = err.message ?: "Failed to import")
