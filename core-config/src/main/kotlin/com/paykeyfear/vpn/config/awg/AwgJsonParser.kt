@@ -52,6 +52,8 @@ internal object AwgJsonToConf {
         obj.str("Jmax", "jmax")?.let { sb.append("Jmax = ").append(it).append('\n') }
         obj.str("S1", "s1")?.let { sb.append("S1 = ").append(it).append('\n') }
         obj.str("S2", "s2")?.let { sb.append("S2 = ").append(it).append('\n') }
+        obj.str("S3", "s3")?.let { sb.append("S3 = ").append(it).append('\n') }
+        obj.str("S4", "s4")?.let { sb.append("S4 = ").append(it).append('\n') }
         obj.str("H1", "h1")?.let { sb.append("H1 = ").append(it).append('\n') }
         obj.str("H2", "h2")?.let { sb.append("H2 = ").append(it).append('\n') }
         obj.str("H3", "h3")?.let { sb.append("H3 = ").append(it).append('\n') }

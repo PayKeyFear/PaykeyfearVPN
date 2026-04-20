@@ -102,6 +102,7 @@ class AwgTunnel(
             append(" keepalive=").append(config.persistentKeepalive ?: "none")
             append(" jc=").append(j.jc).append(" jmin=").append(j.jmin).append(" jmax=").append(j.jmax)
             append(" s1=").append(j.s1).append(" s2=").append(j.s2)
+            append(" s3=").append(j.s3).append(" s4=").append(j.s4)
             append(" h=").append(listOf(j.h1, j.h2, j.h3, j.h4).count { !it.isNullOrBlank() }).append("/4")
             append(" i=").append(listOf(j.i1, j.i2, j.i3, j.i4, j.i5).count { !it.isNullOrBlank() }).append("/5")
             append(" jN=").append(listOf(j.j1, j.j2, j.j3).count { !it.isNullOrBlank() }).append("/3")

@@ -8,6 +8,7 @@ import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.Endpoint
 import com.paykeyfear.vpn.core.model.Protocol
 import java.util.UUID
+import timber.log.Timber
 
 /**
  * Parses AmneziaWG / WireGuard `.conf` format:
@@ -50,6 +51,13 @@ class AwgConfParser : ConfigParser {
         val iface = sections["interface"] ?: throw ConfigParseException("Missing [Interface] section")
         val peer = sections["peer"] ?: throw ConfigParseException("Missing [Peer] section")
 
+        // Diagnostic: dump the full key set we actually parsed. The magic/junk
+        // fields are easy to drop on the floor if the upstream producer uses
+        // an unexpected case, separator, or escape — this log lets us tell at
+        // a glance whether `I1 = ...` in the .conf actually landed in `iface`.
+        Timber.tag(TAG).i("interface keys=%s", iface.keys.sorted())
+        Timber.tag(TAG).i("peer keys=%s", peer.keys.sorted())
+
         val privateKey = iface["privatekey"] ?: throw ConfigParseException("Interface.PrivateKey missing")
         val addresses = iface["address"]?.splitCsv().orEmpty()
         val dns = iface["dns"]?.splitCsv().orEmpty()
@@ -68,6 +76,8 @@ class AwgConfParser : ConfigParser {
                 jmax = iface["jmax"]?.toIntOrNull(),
                 s1 = iface["s1"]?.toIntOrNull(),
                 s2 = iface["s2"]?.toIntOrNull(),
+                s3 = iface["s3"]?.toIntOrNull(),
+                s4 = iface["s4"]?.toIntOrNull(),
                 h1 = iface["h1"]?.takeIf { it.isNotBlank() },
                 h2 = iface["h2"]?.takeIf { it.isNotBlank() },
                 h3 = iface["h3"]?.takeIf { it.isNotBlank() },
@@ -131,6 +141,7 @@ class AwgConfParser : ConfigParser {
         }
 
     private companion object {
+        const val TAG = "AwgConfParser"
         val INTERFACE_HEADER = Regex("""(?im)^\s*\[Interface]""")
         val PEER_HEADER = Regex("""(?im)^\s*\[Peer]""")
         val SECTION_RE = Regex("""\[([A-Za-z]+)]""")

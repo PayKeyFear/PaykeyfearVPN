@@ -30,6 +30,8 @@ object AwgConfigRenderer {
                 jmax?.let { appendLine("jmax=$it") }
                 s1?.let { appendLine("s1=$it") }
                 s2?.let { appendLine("s2=$it") }
+                s3?.let { appendLine("s3=$it") }
+                s4?.let { appendLine("s4=$it") }
                 // Pass magic headers through verbatim — amneziawg-go v0.2.17
                 // accepts both single uint32 and "start-end" ranges natively
                 // and validates incoming packets across the whole range.

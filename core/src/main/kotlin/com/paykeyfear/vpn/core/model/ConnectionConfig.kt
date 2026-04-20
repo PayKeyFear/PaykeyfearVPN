@@ -70,6 +70,10 @@ data class AwgJunkParams(
     val jmax: Int? = null,
     val s1: Int? = null,
     val s2: Int? = null,
+    // s3 = cookie-reply padding, s4 = transport padding. Both added by
+    // AmneziaWG 1.5 and accepted by amneziawg-go v0.2.17's UAPI.
+    val s3: Int? = null,
+    val s4: Int? = null,
     // Magic-header specs. In AmneziaWG 1.5 configs they come as ranges
     // ("743502058-1997075986"); in AWG 2.0 configs they are single uint32
     // values. Stored as raw strings so the renderer can decide how to
