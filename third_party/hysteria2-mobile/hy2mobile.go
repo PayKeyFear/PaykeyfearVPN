@@ -60,10 +60,10 @@ type Protector interface {
 // called before Start when running on Android. Pass nil to revert.
 func SetProtector(p Protector) {
 	if p == nil {
-		protector.Store(Protector(noopProtector{}))
+		protector.Store(protectorHolder{p: noopProtector{}})
 		return
 	}
-	protector.Store(p)
+	protector.Store(protectorHolder{p: p})
 }
 
 // Start launches a Hysteria2 client using the YAML configuration produced
@@ -454,12 +454,12 @@ var (
 	engineMu      sync.Mutex
 	engineRunning bool
 
-	protector atomic.Value // Protector
+	protector atomic.Value // protectorHolder
 	lastErr   atomic.Value // string
 )
 
 func init() {
-	protector.Store(Protector(noopProtector{}))
+	protector.Store(protectorHolder{p: noopProtector{}})
 }
 
 func newHandleID() string {
@@ -478,12 +478,17 @@ type noopProtector struct{}
 
 func (noopProtector) Protect(int32) bool { return true }
 
+// protectorHolder wraps the Protector interface in a concrete struct so
+// atomic.Value sees the same dynamic type on every Store (atomic.Value
+// panics with "store of inconsistently typed value" otherwise).
+type protectorHolder struct{ p Protector }
+
 func currentProtector() Protector {
 	v := protector.Load()
 	if v == nil {
 		return noopProtector{}
 	}
-	return v.(Protector)
+	return v.(protectorHolder).p
 }
 
 func setLastError(err error) {

@@ -16,12 +16,12 @@ import timber.log.Timber
  * ```
  * package paykeyfearnative;
  * public class Paykeyfearnative {
- *     public static int    AwgStart(String cfg, int tunFd);
- *     public static void   AwgStop(int handle);
- *     public static String AwgStats(int handle);
- *     public static String AwgVersion();
- *     public static String AwgLastError();
- *     public static void   SetProtector(Protector p);  // shared across all protos
+ *     public static int    awgStart(String cfg, int tunFd);
+ *     public static void   awgStop(int handle);
+ *     public static String awgStats(int handle);
+ *     public static String awgVersion();
+ *     public static String awgLastError();
+ *     public static void   setProtector(Protector p);  // shared across all protos
  * }
  * public interface Protector { boolean protect(int fd); }
  * ```
@@ -31,11 +31,11 @@ internal object AwgNative {
         val cls = Class.forName("paykeyfearnative.Paykeyfearnative")
         val protectorCls = Class.forName("paykeyfearnative.Protector")
         Bridge(
-            start = cls.getMethod("AwgStart", String::class.java, Int::class.javaPrimitiveType),
-            stop = cls.getMethod("AwgStop", Int::class.javaPrimitiveType),
-            stats = cls.getMethod("AwgStats", Int::class.javaPrimitiveType),
-            lastError = cls.getMethod("AwgLastError"),
-            setProtector = cls.getMethod("SetProtector", protectorCls),
+            start = cls.getMethod("awgStart", String::class.java, Int::class.javaPrimitiveType),
+            stop = cls.getMethod("awgStop", Int::class.javaPrimitiveType),
+            stats = cls.getMethod("awgStats", Int::class.javaPrimitiveType),
+            lastError = cls.getMethod("awgLastError"),
+            setProtector = cls.getMethod("setProtector", protectorCls),
             protectorCls = protectorCls,
         )
     }.onFailure {
@@ -72,6 +72,9 @@ internal object AwgNative {
     fun stopTunnel(handle: Long) {
         bridge?.stop?.invoke(null, handle.toInt())
     }
+
+    fun lastError(): String =
+        bridge?.lastError?.invoke(null) as? String ?: ""
 
     fun getStats(handle: Long): LongArray {
         val raw = bridge?.stats?.invoke(null, handle.toInt()) as? String ?: return longArrayOf(0, 0)

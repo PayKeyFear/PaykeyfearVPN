@@ -7,7 +7,7 @@ import timber.log.Timber
  *
  * The three protocol Go wrappers are compiled into a single umbrella
  * `paykeyfearnative.aar` (see `third_party/gomobile-bundle`); that .aar
- * exposes `AwgVersion()`, `VlessVersion()`, `Hy2Version()` on the Java
+ * exposes `awgVersion()`, `vlessVersion()`, `hy2Version()` on the Java
  * class `paykeyfearnative.Paykeyfearnative`. When the .aar is missing
  * (fresh checkout, JVM tests) `Class.forName` throws and we return null
  * so the About screen renders a "not bundled" badge instead of crashing.
@@ -29,11 +29,11 @@ object NativeBackendVersions {
     var lastError: String? = null
         private set
 
-    fun awg(): String? = invokeStatic("AwgVersion")
+    fun awg(): String? = invokeStatic("awgVersion")
 
-    fun vless(): String? = invokeStatic("VlessVersion")
+    fun vless(): String? = invokeStatic("vlessVersion")
 
-    fun hysteria2(): String? = invokeStatic("Hy2Version")
+    fun hysteria2(): String? = invokeStatic("hy2Version")
 
     private fun invokeStatic(methodName: String): String? {
         return try {

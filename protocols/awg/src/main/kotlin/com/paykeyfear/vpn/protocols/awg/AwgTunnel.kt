@@ -33,7 +33,10 @@ class AwgTunnel(
         native.installProtector(protector)
         val rendered = AwgConfigRenderer.render(config)
         handle = native.start(rendered, tunFd)
-        if (handle == INVALID_HANDLE) error("amneziawg-go refused config")
+        if (handle == INVALID_HANDLE) {
+            val why = native.lastError().ifBlank { "no error reported" }
+            error("amneziawg-go refused config: $why")
+        }
     }
 
     override suspend fun stop() {
@@ -64,6 +67,8 @@ class AwgTunnel(
         fun stop(handle: Long)
 
         fun stats(handle: Long): LongArray
+
+        fun lastError(): String = ""
     }
 
     private object JniNative : Native {
@@ -76,6 +81,8 @@ class AwgTunnel(
         override fun stop(handle: Long) = AwgNative.stopTunnel(handle)
 
         override fun stats(handle: Long): LongArray = AwgNative.getStats(handle)
+
+        override fun lastError(): String = AwgNative.lastError()
     }
 
     companion object {

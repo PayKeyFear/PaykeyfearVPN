@@ -21,7 +21,9 @@ object AwgConfigRenderer {
     fun render(config: ConnectionConfig.Awg): String =
         buildString {
             appendLine("private_key=${toHexKey(config.privateKey)}")
-            config.mtu?.let { appendLine("mtu=$it") }
+            // MTU is NOT a valid WireGuard/Amnezia UAPI key — it's set on
+            // the kernel netdev (or via VpnService.Builder.setMtu on Android)
+            // and including it here makes IpcSet return -22.
             with(config.junk) {
                 jc?.let { appendLine("jc=$it") }
                 jmin?.let { appendLine("jmin=$it") }

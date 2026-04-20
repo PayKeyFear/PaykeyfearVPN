@@ -15,12 +15,12 @@ import timber.log.Timber
  * ```
  * package hy2mobile;
  * public class Hy2mobile {
- *     public static String Start(String yamlConfig, int tunFd);  // returns handle
- *     public static void   Stop(String handle);
- *     public static String Stats(String handle);                 // {"rx":..,"tx":..}
- *     public static void   SetProtector(Protector p);            // Go interface
- *     public static String LastError();
- *     public static String Version();
+ *     public static String hy2Start(String yamlConfig, int tunFd);  // returns handle
+ *     public static void   hy2Stop(String handle);
+ *     public static String hy2Stats(String handle);                 // {"rx":..,"tx":..}
+ *     public static void   setProtector(Protector p);              // Go interface
+ *     public static String hy2LastError();
+ *     public static String hy2Version();
  * }
  * public interface Protector { boolean protect(int fd); }
  * ```
@@ -31,14 +31,14 @@ internal object Hysteria2Native {
         val protectorCls = Class.forName("paykeyfearnative.Protector")
         Bridge(
             start = cls.getMethod(
-                "Hy2Start",
+                "hy2Start",
                 String::class.java,
                 Int::class.javaPrimitiveType,
             ),
-            stop = cls.getMethod("Hy2Stop", String::class.java),
-            stats = cls.getMethod("Hy2Stats", String::class.java),
-            setProtector = cls.getMethod("SetProtector", protectorCls),
-            lastError = cls.getMethod("Hy2LastError"),
+            stop = cls.getMethod("hy2Stop", String::class.java),
+            stats = cls.getMethod("hy2Stats", String::class.java),
+            setProtector = cls.getMethod("setProtector", protectorCls),
+            lastError = cls.getMethod("hy2LastError"),
             protectorCls = protectorCls,
         )
     }.onFailure {

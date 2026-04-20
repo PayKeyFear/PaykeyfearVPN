@@ -55,10 +55,10 @@ type Protector interface {
 // StartXray when running on Android.
 func SetProtector(p Protector) {
 	if p == nil {
-		protector.Store(Protector(noopProtector{}))
+		protector.Store(protectorHolder{p: noopProtector{}})
 		return
 	}
-	protector.Store(p)
+	protector.Store(protectorHolder{p: p})
 }
 
 // StartXray boots Xray-core with the given JSON config. The config is
@@ -196,12 +196,12 @@ var (
 	engineMu      sync.Mutex
 	engineRunning bool
 
-	protector atomic.Value // Protector
+	protector atomic.Value // protectorHolder
 	lastErr   atomic.Value // string
 )
 
 func init() {
-	protector.Store(Protector(noopProtector{}))
+	protector.Store(protectorHolder{p: noopProtector{}})
 	// Register a dialer controller so every outbound socket Xray opens
 	// passes through VpnService.protect(). Runs once per process. The
 	// controller is invoked synchronously during connect, so grabbing the
@@ -236,6 +236,11 @@ type noopProtector struct{}
 
 func (noopProtector) Protect(fd int32) bool { return true }
 
+// protectorHolder wraps the Protector interface in a concrete struct so
+// atomic.Value sees the same dynamic type on every Store (atomic.Value
+// panics with "store of inconsistently typed value" otherwise).
+type protectorHolder struct{ p Protector }
+
 func setLastError(err error) {
 	if err == nil {
 		return
@@ -248,5 +253,5 @@ func currentProtector() Protector {
 	if v == nil {
 		return noopProtector{}
 	}
-	return v.(Protector)
+	return v.(protectorHolder).p
 }

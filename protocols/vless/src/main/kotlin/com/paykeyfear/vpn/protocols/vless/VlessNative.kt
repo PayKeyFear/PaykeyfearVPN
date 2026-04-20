@@ -14,13 +14,13 @@ import timber.log.Timber
  * ```
  * package vlessmobile;
  * public class Vlessmobile {
- *     public static int    StartXray(String configJson);
- *     public static void   StopXray(int handle);
- *     public static int    Tun2SocksStart(int tunFd, String host, int port);
- *     public static void   Tun2SocksStop(int handle);
- *     public static void   SetProtector(Protector p);   // Go interface
- *     public static String LastError();
- *     public static String Version();
+ *     public static int    vlessStartXray(String configJson);
+ *     public static void   vlessStopXray(int handle);
+ *     public static int    vlessTun2SocksStart(int tunFd, String host, int port);
+ *     public static void   vlessTun2SocksStop(int handle);
+ *     public static void   setProtector(Protector p);   // Go interface
+ *     public static String vlessLastError();
+ *     public static String vlessVersion();
  * }
  * public interface Protector { boolean protect(int fd); }
  * ```
@@ -30,17 +30,17 @@ internal object VlessNative {
         val cls = Class.forName("paykeyfearnative.Paykeyfearnative")
         val protectorCls = Class.forName("paykeyfearnative.Protector")
         Bridge(
-            startXray = cls.getMethod("VlessStartXray", String::class.java),
-            stopXray = cls.getMethod("VlessStopXray", Int::class.javaPrimitiveType),
+            startXray = cls.getMethod("vlessStartXray", String::class.java),
+            stopXray = cls.getMethod("vlessStopXray", Int::class.javaPrimitiveType),
             t2sStart = cls.getMethod(
-                "VlessTun2SocksStart",
+                "vlessTun2SocksStart",
                 Int::class.javaPrimitiveType,
                 String::class.java,
                 Int::class.javaPrimitiveType,
             ),
-            t2sStop = cls.getMethod("VlessTun2SocksStop", Int::class.javaPrimitiveType),
-            setProtector = cls.getMethod("SetProtector", protectorCls),
-            lastError = cls.getMethod("VlessLastError"),
+            t2sStop = cls.getMethod("vlessTun2SocksStop", Int::class.javaPrimitiveType),
+            setProtector = cls.getMethod("setProtector", protectorCls),
+            lastError = cls.getMethod("vlessLastError"),
             protectorCls = protectorCls,
         )
     }.onFailure {

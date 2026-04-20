@@ -52,31 +52,46 @@ class PaykeyfearVpnService : VpnService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var tunnelJob: Job? = null
 
-    // Keep the tun ParcelFileDescriptor alive for as long as the tunnel is
-    // up. Closing it is what actually tears the Android tun interface down,
-    // so we MUST close it on stop — otherwise the OS keeps routing traffic
-    // into a dead fd and the device appears to still be connected to the
-    // VPN with no working internet.
-    @Volatile
-    private var tunPfd: ParcelFileDescriptor? = null
+    // We don't keep the ParcelFileDescriptor — once Builder.establish()
+    // returns we immediately call detachFd() so the JVM-side wrapper
+    // releases ownership of the tun fd, then close the (now-empty) PFD.
+    // The native backend (Go) becomes the sole owner of the fd and is
+    // responsible for closing it on Stop. Keeping a PFD alive in parallel
+    // with Go ownership causes binder-thread fdsan SIGABRTs when the OS
+    // recycles the fd number.
 
     @Volatile
     private var lastConfig: ConnectionConfig? = null
 
     private val networkCallback by lazy {
         object : ConnectivityManager.NetworkCallback() {
-            // Android emits an `onAvailable` whenever the active default
-            // network changes (Wi-Fi ⇄ cellular, suspend/resume, hotspot
-            // toggles…). On every transition we tear down the current
-            // tunnel and re-establish with the same config — same pattern
-            // WireGuard's official client uses.
+            // Android emits an `onAvailable` whenever an underlying network
+            // appears (Wi-Fi ⇄ cellular, suspend/resume, hotspot toggles…).
+            // On every transition we tear down the current tunnel and
+            // re-establish with the same config — same pattern WireGuard's
+            // official client uses.
             //
             // Skipped on the very first callback (which fires immediately
             // after registration with the current network) so we don't
-            // bounce the tunnel that's only just being established.
+            // bounce the tunnel that's only just being established. Also
+            // skipped for VPN-transport networks — our own tunnel shows up
+            // here once Builder.establish() succeeds, and reacting to it
+            // would cancel the in-flight launchTunnel coroutine.
             private var first = true
 
             override fun onAvailable(network: Network) {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                val caps = cm?.getNetworkCapabilities(network)
+                if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
+                    return
+                }
+                // Tell the framework which network the VPN's own outbound
+                // sockets should use, so AWG/VLESS/Hysteria2 traffic
+                // bypasses our own tun (otherwise it loops and no data
+                // flows). amneziawg-go's default Bind does not call
+                // VpnService.protect, so this is the only thing keeping
+                // AWG packets off the tunnel.
+                runCatching { setUnderlyingNetworks(arrayOf(network)) }
                 if (first) {
                     first = false
                     return
@@ -84,6 +99,10 @@ class PaykeyfearVpnService : VpnService() {
                 val cfg = lastConfig ?: return
                 Timber.tag(TAG).i("Network changed (%s) — reconnecting", network)
                 launchTunnel(cfg)
+            }
+
+            override fun onLost(network: Network) {
+                runCatching { setUnderlyingNetworks(null) }
             }
         }
     }
@@ -138,8 +157,6 @@ class PaykeyfearVpnService : VpnService() {
 
     override fun onDestroy() {
         unregisterNetworkCallback()
-        tunPfd?.let { runCatching { it.close() } }
-        tunPfd = null
         scope.cancel()
         super.onDestroy()
     }
@@ -147,12 +164,11 @@ class PaykeyfearVpnService : VpnService() {
     private fun launchTunnel(config: ConnectionConfig) {
         lastConfig = config
         registerNetworkCallback()
-        tunnelJob?.cancel()
+        val priorJob = tunnelJob
         tunnelJob = scope.launch {
-            // Stop any previous tunnel cleanly before rebuilding the tun fd.
-            // launchTunnel may be re-entered from the network callback
-            // while the controller is still in Connected state.
+            runCatching { priorJob?.cancelAndJoin() }
             runCatching { controller.stop() }
+
             val split = runCatching { settings.splitTunnel() }.getOrDefault(SplitTunnelConfig.OFF)
             val builder = Builder()
                 .setSession(config.displayName)
@@ -167,20 +183,32 @@ class PaykeyfearVpnService : VpnService() {
                 stopSelf()
                 return@launch
             }
-            // Replace any prior fd, closing the old one — re-entry from the
-            // network callback would otherwise leak file descriptors.
-            tunPfd?.let { runCatching { it.close() } }
-            tunPfd = pfd
-            val protector = Protector { fd -> protect(fd) }
-            // Hand a *dup* of the fd to native code; we keep the ParcelFileDescriptor
-            // ourselves so closing it on stop reliably tears the tun down even if
-            // the native side has already released its copy.
-            val nativeFd = pfd.fd
-            runCatching { controller.start(config, nativeFd, protector) }.onFailure {
+            // detachFd() releases the JVM wrapper's ownership of the fd;
+            // we then immediately close the (now empty) PFD. From this
+            // point on, the fd is owned exclusively by the native backend
+            // and will be closed when the backend's stop() runs.
+            val nativeFd = pfd.detachFd()
+            runCatching { pfd.close() }
+            runCatching { controller.start(config, nativeFd, protector()) }.onFailure {
                 Timber.e(it, "Tunnel failed")
+                // Native didn't take ownership — close the fd ourselves.
+                runCatching { android.system.Os.close(java.io.FileDescriptor().apply { setIntFd(nativeFd) }) }
                 stopSelf()
             }
         }
+    }
+
+    private fun protector(): Protector = Protector { fd -> protect(fd) }
+
+    /**
+     * Reflective shim — `FileDescriptor.setInt$` is hidden but stable; we
+     * need it to close a raw int fd via [android.system.Os.close] on the
+     * tunnel-start failure path.
+     */
+    private fun java.io.FileDescriptor.setIntFd(fd: Int) {
+        val m = java.io.FileDescriptor::class.java.getDeclaredMethod("setInt\$", Int::class.javaPrimitiveType)
+        m.isAccessible = true
+        m.invoke(this, fd)
     }
 
     private fun registerNetworkCallback() {
@@ -188,7 +216,7 @@ class PaykeyfearVpnService : VpnService() {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
         val req = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
             .build()
         runCatching { cm.registerNetworkCallback(req, networkCallback) }
             .onSuccess { networkCallbackRegistered = true }
@@ -229,13 +257,8 @@ class PaykeyfearVpnService : VpnService() {
         unregisterNetworkCallback()
         val prior = tunnelJob
         scope.launch {
-            // Wait for any in-flight start() to settle before tearing the
-            // tun fd down — otherwise we could close it from underneath
-            // a native backend that's still wiring it up.
             runCatching { prior?.cancelAndJoin() }
             runCatching { controller.stop() }
-            tunPfd?.let { runCatching { it.close() } }
-            tunPfd = null
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }

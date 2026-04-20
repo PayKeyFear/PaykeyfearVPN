@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -45,31 +44,33 @@ type Protector interface {
 // Safe to call before or between Start()s; the most recent value wins.
 func SetProtector(p Protector) {
 	if p == nil {
-		protector.Store(Protector(noopProtector{}))
+		protector.Store(protectorHolder{p: noopProtector{}})
 		return
 	}
-	protector.Store(p)
+	protector.Store(protectorHolder{p: p})
 }
 
 func Start(cfg string, tunFd int32) int32 {
-	// dup(2) — own the fd inside Go's runtime so we can close it on Stop
-	// without poking at the JVM-side ParcelFileDescriptor.
-	dup, err := unix.Dup(int(tunFd))
-	if err != nil {
-		setLastError(fmt.Errorf("dup tunFd: %w", err))
-		return -1
-	}
-	_ = unix.SetNonblock(dup, true)
+	// The Java side calls ParcelFileDescriptor.detachFd() before passing
+	// the fd to us, so we are the sole owner. No dup needed; on any
+	// failure path we close it ourselves.
+	fd := int(tunFd)
+	_ = unix.SetNonblock(fd, true)
 
-	tdev, err := tun.CreateTUNFromFile(os.NewFile(uintptr(dup), "tun"), 0)
+	// CreateTUNFromFile runs ioctl(TUNSETIFF) and asks for the interface
+	// name — neither works on Android's VpnService fd, which is opened by
+	// system_server and exposed to us as a plain packet socket. We must
+	// use the unmonitored variant the WireGuard-Android client uses.
+	tdev, _, err := tun.CreateUnmonitoredTUNFromFD(fd)
 	if err != nil {
-		_ = unix.Close(dup)
+		_ = unix.Close(fd)
 		setLastError(fmt.Errorf("create tun: %w", err))
 		return -1
 	}
 
 	logger := device.NewLogger(device.LogLevelError, "[awg] ")
-	dev := device.NewDevice(tdev, conn.NewDefaultBind(), logger)
+	bind := conn.NewDefaultBind()
+	dev := device.NewDevice(tdev, bind, logger)
 
 	if err := dev.IpcSet(cfg); err != nil {
 		dev.Close()
@@ -82,10 +83,30 @@ func Start(cfg string, tunFd int32) int32 {
 		return -1
 	}
 
-	h := &awgHandle{device: dev}
+	// Wireguard-android pattern: once the bind has opened its sockets,
+	// peek their fds and route them through VpnService.protect() so the
+	// AWG handshake/keepalive UDP packets bypass our own tun (otherwise
+	// they loop and no traffic flows at all).
+	protectBindSockets(bind)
+
+	h := &awgHandle{device: dev, bind: bind}
 	id := int32(handleCounter.Add(1))
 	handles.Store(id, h)
 	return id
+}
+
+func protectBindSockets(bind conn.Bind) {
+	pb, ok := bind.(conn.PeekLookAtSocketFd)
+	if !ok {
+		return
+	}
+	p := currentProtector()
+	if fd, err := pb.PeekLookAtSocketFd4(); err == nil && fd >= 0 {
+		_ = p.Protect(int32(fd))
+	}
+	if fd, err := pb.PeekLookAtSocketFd6(); err == nil && fd >= 0 {
+		_ = p.Protect(int32(fd))
+	}
 }
 
 func Stop(handle int32) {
@@ -183,27 +204,33 @@ var (
 	handles       sync.Map
 	handleCounter atomic.Int32
 	lastErr       atomic.Value // string
-	protector     atomic.Value // Protector
+	protector     atomic.Value // protectorHolder
 )
 
 func init() {
-	protector.Store(Protector(noopProtector{}))
+	protector.Store(protectorHolder{p: noopProtector{}})
 }
 
 type awgHandle struct {
 	device *device.Device
+	bind   conn.Bind
 }
 
 type noopProtector struct{}
 
 func (noopProtector) Protect(int32) bool { return true }
 
+// protectorHolder wraps the Protector interface in a concrete struct so
+// atomic.Value sees the same dynamic type on every Store (atomic.Value
+// panics with "store of inconsistently typed value" otherwise).
+type protectorHolder struct{ p Protector }
+
 func currentProtector() Protector {
 	v := protector.Load()
 	if v == nil {
 		return noopProtector{}
 	}
-	return v.(Protector)
+	return v.(protectorHolder).p
 }
 
 func setLastError(err error) { lastErr.Store(err.Error()) }
