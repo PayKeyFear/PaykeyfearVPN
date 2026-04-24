@@ -178,7 +178,7 @@ class PaykeyfearVpnService : VpnService() {
                 .setMtu(configMtu(config))
             applyRoutes(builder, ruBypass)
             applyAddresses(builder, config)
-            applyDns(builder, config)
+            applyDns(builder, config, ruBypass)
             applySplitTunnel(builder, split)
             val pfd = builder.establish() ?: run {
                 Timber.e("VpnService.Builder.establish() returned null")
@@ -240,6 +240,14 @@ class PaykeyfearVpnService : VpnService() {
         builder.addRoute("0.0.0.0", 0)
         builder.addRoute("::", 0)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        // v2fly's raw RU list is ~21k entries, which blows past the ~1 MB
+        // Binder parcel cap on VpnService establishVpn with 2 MB of routes.
+        // Coarsen to /16 on v4 and /32 on v6, then aggregate adjacent
+        // ranges, dropping the count by 30-60x. Over-coverage is fine for
+        // regional bypass — the only cost is a few non-RU IPs that happen
+        // to sit inside the same /16 as RU also skip the tunnel.
+        val v4 = RouteExclusion.aggregateIpv4(RouteExclusion.coarsenIpv4(ruBypass.ipv4, COARSEN_V4))
+        val v6 = RouteExclusion.aggregateIpv6(RouteExclusion.coarsenIpv6(ruBypass.ipv6, COARSEN_V6))
         var ok = 0
         var failed = 0
         val addExclude = fun(cidr: GeoCidr) {
@@ -247,15 +255,20 @@ class PaykeyfearVpnService : VpnService() {
                 builder.excludeRoute(android.net.IpPrefix(java.net.InetAddress.getByName(cidr.address), cidr.prefixLength))
             }.onSuccess { ok++ }.onFailure { failed++ }
         }
-        ruBypass.ipv4.forEach(addExclude)
-        ruBypass.ipv6.forEach(addExclude)
-        Timber.tag(TAG).i("RU bypass: excludeRoute applied=%d failed=%d (SDK>=33)", ok, failed)
+        v4.forEach(addExclude)
+        v6.forEach(addExclude)
+        Timber.tag(TAG).i(
+            "RU bypass: excludeRoute applied=%d failed=%d v4=%d v6=%d (from raw v4=%d v6=%d)",
+            ok, failed, v4.size, v6.size, ruBypass.ipv4.size, ruBypass.ipv6.size,
+        )
     }
 
     /** API < 33: Builder has no excludeRoute — use the precomputed complement as addRoute list. */
     private fun applyRoutesWithComplement(builder: Builder, ruBypass: RuBypassConfig) {
-        val v4Complement = RouteExclusion.complementIpv4(ruBypass.ipv4)
-        val v6Complement = RouteExclusion.complementIpv6(ruBypass.ipv6)
+        val v4Coarse = RouteExclusion.aggregateIpv4(RouteExclusion.coarsenIpv4(ruBypass.ipv4, COARSEN_V4))
+        val v6Coarse = RouteExclusion.aggregateIpv6(RouteExclusion.coarsenIpv6(ruBypass.ipv6, COARSEN_V6))
+        val v4Complement = RouteExclusion.complementIpv4(v4Coarse)
+        val v6Complement = RouteExclusion.complementIpv6(v6Coarse)
         var ok = 0
         var failed = 0
         (v4Complement + v6Complement).forEach { cidr ->
@@ -325,15 +338,27 @@ class PaykeyfearVpnService : VpnService() {
         }
     }
 
-    private fun applyDns(builder: Builder, config: ConnectionConfig) {
-        val dns = when (config) {
+    private fun applyDns(builder: Builder, config: ConnectionConfig, ruBypass: RuBypassConfig) {
+        // When RU bypass is on we front-load Yandex DNS (77.88.8.8) so DNS
+        // traffic itself goes direct (77.88.0.0/16 is in excludeRoute), and
+        // Yandex answers with RU-local CDN IPs that land inside the bypass
+        // list. Without this, the tunnel's Cloudflare resolver sees the VPN
+        // exit IP and returns non-RU CDN IPs for ya.ru, vk.com, etc., which
+        // defeats the whole bypass.
+        val dns = when {
+            ruBypass.enabled -> RU_BYPASS_DNS + defaultDnsFor(config)
+            else -> defaultDnsFor(config)
+        }
+        dns.forEach(builder::addDnsServer)
+    }
+
+    private fun defaultDnsFor(config: ConnectionConfig): List<String> =
+        when (config) {
             is ConnectionConfig.Awg -> config.dns.ifEmpty { DEFAULT_DNS }
             is ConnectionConfig.Vless,
             is ConnectionConfig.Hysteria2,
             -> DEFAULT_DNS
         }
-        dns.forEach(builder::addDnsServer)
-    }
 
     private fun startAsForeground() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -421,6 +446,12 @@ class PaykeyfearVpnService : VpnService() {
         private const val NOTIFICATION_ID = 0x50_56_4E_01
         private const val DEFAULT_MTU = 1420
 
+        // Aggressive RU-bypass coarsening to fit under the Binder 1 MB
+        // establishVpn parcel cap. /16 + /32 empirically drops 21 448 v4
+        // entries to ~300 and 9 000 v6 entries to ~200.
+        private const val COARSEN_V4 = 16
+        private const val COARSEN_V6 = 32
+
         // tun2socks engine MTU above; matches what we ask Go for.
         private const val VLESS_MTU = 1500
 
@@ -429,6 +460,12 @@ class PaykeyfearVpnService : VpnService() {
         private const val HYSTERIA2_MTU = 1400
 
         private val DEFAULT_DNS = listOf("1.1.1.1", "8.8.8.8")
+
+        // Yandex public resolvers live at 77.88.8.8 / 77.88.8.1 (77.88.0.0/16
+        // lands inside the coarsened RU bypass list, so DNS queries themselves
+        // go direct, Yandex sees the user's real RU IP, and returns RU-local
+        // CDN answers that also fall inside the bypass.
+        private val RU_BYPASS_DNS = listOf("77.88.8.8", "77.88.8.1")
 
         private val SYNTHETIC_OVERLAY_ADDRESSES = listOf(
             "172.19.0.2/32",

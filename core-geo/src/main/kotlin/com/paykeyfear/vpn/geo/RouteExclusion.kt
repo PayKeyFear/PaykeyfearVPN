@@ -15,6 +15,68 @@ import java.math.BigInteger
  * tiles it (classic range-to-CIDR decomposition).
  */
 object RouteExclusion {
+    /**
+     * Collapses a CIDR set into the minimal list that covers exactly the
+     * same addresses. Necessary before passing a large list (e.g. ~21k
+     * RU CIDRs from v2fly/geoip) to [android.net.VpnService.Builder.excludeRoute]
+     * — the Binder parcel for establishVpn has a ~1 MB cap and the
+     * upstream list blows straight through it.
+     */
+    fun aggregateIpv4(cidrs: Collection<GeoCidr>): List<GeoCidr> {
+        val ranges = cidrs.asSequence()
+            .filter { !it.isIpv6 }
+            .mapNotNull(::toRangeV4)
+            .toMutableList()
+        if (ranges.isEmpty()) return emptyList()
+        ranges.sortBy { it.first }
+        val merged = mergeRanges(ranges)
+        return merged.flatMap { (start, end) -> decomposeV4(start, end) }
+    }
+
+    fun aggregateIpv6(cidrs: Collection<GeoCidr>): List<GeoCidr> {
+        val ranges = cidrs.asSequence()
+            .filter { it.isIpv6 }
+            .mapNotNull(::toRangeV6)
+            .toMutableList()
+        if (ranges.isEmpty()) return emptyList()
+        ranges.sortBy { it.first }
+        val merged = mergeRangesBig(ranges)
+        return merged.flatMap { (start, end) -> decomposeV6(start, end) }
+    }
+
+    /**
+     * Coarsens each IPv4 CIDR to at most [maxPrefixLength] bits — a
+     * `1.2.3.0/24` coarsened to `/16` becomes `1.2.0.0/16`. Use together
+     * with [aggregateIpv4] to collapse the v2fly RU list (~21k entries)
+     * down to a count that fits under the 1 MB Binder parcel limit for
+     * `VpnService.Builder.excludeRoute`. Over-coverage is deliberate: RU
+     * IPs inside the coarser blocks bypass the VPN, and the small number
+     * of non-RU IPs that happen to live there do too — acceptable for
+     * regional routing.
+     */
+    fun coarsenIpv4(cidrs: Collection<GeoCidr>, maxPrefixLength: Int): List<GeoCidr> {
+        require(maxPrefixLength in 0..32)
+        return cidrs.mapNotNull { cidr ->
+            if (cidr.isIpv6) return@mapNotNull null
+            if (cidr.prefixLength <= maxPrefixLength) return@mapNotNull cidr
+            val net = parseIpv4(cidr.address) ?: return@mapNotNull null
+            val mask = if (maxPrefixLength == 0) 0L else 0xFFFFFFFFL shl (32 - maxPrefixLength) and 0xFFFFFFFFL
+            GeoCidr(formatIpv4(net and mask), maxPrefixLength, false)
+        }
+    }
+
+    fun coarsenIpv6(cidrs: Collection<GeoCidr>, maxPrefixLength: Int): List<GeoCidr> {
+        require(maxPrefixLength in 0..128)
+        return cidrs.mapNotNull { cidr ->
+            if (!cidr.isIpv6) return@mapNotNull null
+            if (cidr.prefixLength <= maxPrefixLength) return@mapNotNull cidr
+            val net = parseIpv6(cidr.address) ?: return@mapNotNull null
+            val hostBits = 128 - maxPrefixLength
+            val coarse = net.shiftRight(hostBits).shiftLeft(hostBits)
+            GeoCidr(formatV6(coarse), maxPrefixLength, true)
+        }
+    }
+
     fun complementIpv4(cidrs: Collection<GeoCidr>): List<GeoCidr> {
         val ranges = cidrs.asSequence()
             .filter { !it.isIpv6 }
