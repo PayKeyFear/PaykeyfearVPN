@@ -33,6 +33,9 @@ class DataStorePreferencesRepository
         override val splitTunnelPackages: Flow<Set<String>> =
             dataStore.data.map { it[KEY_SPLIT_PACKAGES] ?: emptySet() }
 
+        override val ruBypassEnabled: Flow<Boolean> =
+            dataStore.data.map { it[KEY_RU_BYPASS] ?: false }
+
         override suspend fun setSelectedConfigId(id: String?) {
             dataStore.edit { prefs ->
                 if (id == null) prefs.remove(KEY_SELECTED_ID) else prefs[KEY_SELECTED_ID] = id
@@ -55,11 +58,16 @@ class DataStorePreferencesRepository
             dataStore.edit { it[KEY_SPLIT_PACKAGES] = packages }
         }
 
+        override suspend fun setRuBypassEnabled(enabled: Boolean) {
+            dataStore.edit { it[KEY_RU_BYPASS] = enabled }
+        }
+
         private companion object {
             val KEY_SELECTED_ID = stringPreferencesKey("selected_config_id")
             val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
             val KEY_CONNECT_ON_BOOT = booleanPreferencesKey("connect_on_boot")
             val KEY_SPLIT_MODE = stringPreferencesKey("split_tunnel_mode")
             val KEY_SPLIT_PACKAGES = stringSetPreferencesKey("split_tunnel_packages")
+            val KEY_RU_BYPASS = booleanPreferencesKey("ru_bypass_enabled")
         }
     }

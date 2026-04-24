@@ -28,6 +28,7 @@ android {
 dependencies {
     api(project(":core"))
     api(project(":core-config"))
+    api(project(":core-geo"))
     implementation(project(":protocols:awg"))
     implementation(project(":protocols:vless"))
     implementation(project(":protocols:hysteria2"))

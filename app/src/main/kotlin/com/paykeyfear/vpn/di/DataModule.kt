@@ -12,6 +12,9 @@ import com.paykeyfear.vpn.data.prefs.PreferencesRepository
 import com.paykeyfear.vpn.data.prefs.PreferencesTunnelSettings
 import com.paykeyfear.vpn.data.repository.ConfigRepository
 import com.paykeyfear.vpn.data.repository.RoomConfigRepository
+import com.paykeyfear.vpn.geo.GeoRepository
+import com.paykeyfear.vpn.geo.GeoStore
+import com.paykeyfear.vpn.geo.HttpGeoSource
 import com.paykeyfear.vpn.service.TunnelSettings
 import dagger.Binds
 import dagger.Module
@@ -55,6 +58,17 @@ object DataModule {
         PreferenceDataStoreFactory.create(
             produceFile = { File(context.filesDir, "datastore/paykeyfear.preferences_pb") },
         )
+
+    @Provides
+    @Singleton
+    fun provideGeoStore(
+        @ApplicationContext context: Context,
+    ): GeoStore = GeoStore(context)
+
+    @Provides
+    @Singleton
+    fun provideGeoRepository(store: GeoStore): GeoRepository =
+        GeoRepository(source = HttpGeoSource(), store = store)
 }
 
 @Module

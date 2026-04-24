@@ -14,6 +14,8 @@ interface PreferencesRepository {
 
     val splitTunnelPackages: Flow<Set<String>>
 
+    val ruBypassEnabled: Flow<Boolean>
+
     suspend fun setSelectedConfigId(id: String?)
 
     suspend fun setDynamicColorEnabled(enabled: Boolean)
@@ -23,4 +25,6 @@ interface PreferencesRepository {
     suspend fun setSplitTunnelMode(mode: SplitTunnelMode)
 
     suspend fun setSplitTunnelPackages(packages: Set<String>)
+
+    suspend fun setRuBypassEnabled(enabled: Boolean)
 }

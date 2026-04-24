@@ -2,6 +2,7 @@ package com.paykeyfear.vpn.service
 
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
+import com.paykeyfear.vpn.geo.GeoCidr
 
 /**
  * Snapshot of settings the VPN service needs when establishing a tunnel.
@@ -10,6 +11,9 @@ import com.paykeyfear.vpn.core.model.SplitTunnelMode
  */
 interface TunnelSettings {
     suspend fun splitTunnel(): SplitTunnelConfig
+
+    /** Geo-based route split: whether RU-bound traffic should skip the tunnel. */
+    suspend fun ruBypass(): RuBypassConfig
 
     /**
      * Resolves the config that should be used when the system starts the
@@ -26,5 +30,15 @@ data class SplitTunnelConfig(
 ) {
     companion object {
         val OFF = SplitTunnelConfig(SplitTunnelMode.Off, emptySet())
+    }
+}
+
+data class RuBypassConfig(
+    val enabled: Boolean,
+    val ipv4: List<GeoCidr>,
+    val ipv6: List<GeoCidr>,
+) {
+    companion object {
+        val OFF = RuBypassConfig(enabled = false, ipv4 = emptyList(), ipv6 = emptyList())
     }
 }

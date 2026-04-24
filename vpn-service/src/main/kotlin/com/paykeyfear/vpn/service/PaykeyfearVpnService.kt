@@ -22,6 +22,8 @@ import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
 import com.paykeyfear.vpn.core.model.TunnelState
 import com.paykeyfear.vpn.core.model.TunnelStats
+import com.paykeyfear.vpn.geo.GeoCidr
+import com.paykeyfear.vpn.geo.RouteExclusion
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -170,11 +172,11 @@ class PaykeyfearVpnService : VpnService() {
             runCatching { controller.stop() }
 
             val split = runCatching { settings.splitTunnel() }.getOrDefault(SplitTunnelConfig.OFF)
+            val ruBypass = runCatching { settings.ruBypass() }.getOrDefault(RuBypassConfig.OFF)
             val builder = Builder()
                 .setSession(config.displayName)
                 .setMtu(configMtu(config))
-                .addRoute("0.0.0.0", 0)
-                .addRoute("::", 0)
+            applyRoutes(builder, ruBypass)
             applyAddresses(builder, config)
             applyDns(builder, config)
             applySplitTunnel(builder, split)
@@ -218,6 +220,50 @@ class PaykeyfearVpnService : VpnService() {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
         runCatching { cm.unregisterNetworkCallback(networkCallback) }
         networkCallbackRegistered = false
+    }
+
+    private fun applyRoutes(builder: Builder, ruBypass: RuBypassConfig) {
+        if (!ruBypass.enabled || (ruBypass.ipv4.isEmpty() && ruBypass.ipv6.isEmpty())) {
+            builder.addRoute("0.0.0.0", 0)
+            builder.addRoute("::", 0)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            applyRoutesWithExcludes(builder, ruBypass)
+        } else {
+            applyRoutesWithComplement(builder, ruBypass)
+        }
+    }
+
+    /** API 33+: keep `0.0.0.0/0` default + call `excludeRoute` for every RU prefix. */
+    private fun applyRoutesWithExcludes(builder: Builder, ruBypass: RuBypassConfig) {
+        builder.addRoute("0.0.0.0", 0)
+        builder.addRoute("::", 0)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        var ok = 0
+        var failed = 0
+        val addExclude = fun(cidr: GeoCidr) {
+            runCatching {
+                builder.excludeRoute(android.net.IpPrefix(java.net.InetAddress.getByName(cidr.address), cidr.prefixLength))
+            }.onSuccess { ok++ }.onFailure { failed++ }
+        }
+        ruBypass.ipv4.forEach(addExclude)
+        ruBypass.ipv6.forEach(addExclude)
+        Timber.tag(TAG).i("RU bypass: excludeRoute applied=%d failed=%d (SDK>=33)", ok, failed)
+    }
+
+    /** API < 33: Builder has no excludeRoute — use the precomputed complement as addRoute list. */
+    private fun applyRoutesWithComplement(builder: Builder, ruBypass: RuBypassConfig) {
+        val v4Complement = RouteExclusion.complementIpv4(ruBypass.ipv4)
+        val v6Complement = RouteExclusion.complementIpv6(ruBypass.ipv6)
+        var ok = 0
+        var failed = 0
+        (v4Complement + v6Complement).forEach { cidr ->
+            runCatching { builder.addRoute(cidr.address, cidr.prefixLength) }
+                .onSuccess { ok++ }
+                .onFailure { failed++ }
+        }
+        Timber.tag(TAG).i("RU bypass: addRoute complement applied=%d failed=%d (SDK<33)", ok, failed)
     }
 
     private fun applySplitTunnel(builder: Builder, split: SplitTunnelConfig) {

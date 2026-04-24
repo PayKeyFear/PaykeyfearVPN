@@ -31,6 +31,7 @@ data class SplitTunnelUiState(
     val apps: List<InstalledApp> = emptyList(),
     val isLoading: Boolean = true,
     val query: String = "",
+    val ruBypass: Boolean = false,
 ) {
     val filtered: List<InstalledApp> =
         if (query.isBlank()) {
@@ -56,16 +57,17 @@ class SplitTunnelViewModel
             combine(
                 preferences.splitTunnelMode,
                 preferences.splitTunnelPackages,
+                preferences.ruBypassEnabled,
                 apps,
-                loading,
-                query,
-            ) { mode, pkgs, list, isLoading, q ->
+                combine(loading, query) { l, q -> l to q },
+            ) { mode, pkgs, ruBypass, list, (isLoading, q) ->
                 SplitTunnelUiState(
                     mode = mode,
                     selected = pkgs,
                     apps = list,
                     isLoading = isLoading,
                     query = q,
+                    ruBypass = ruBypass,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -102,6 +104,10 @@ class SplitTunnelViewModel
 
         fun setQuery(q: String) {
             query.value = q
+        }
+
+        fun setRuBypass(enabled: Boolean) {
+            viewModelScope.launch { preferences.setRuBypassEnabled(enabled) }
         }
 
         private suspend fun loadInstalledApps(): List<InstalledApp> =

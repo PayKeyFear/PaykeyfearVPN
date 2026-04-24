@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -59,6 +60,22 @@ fun SplitTunnelScreen(
         },
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.split_ru_bypass_title)) },
+                supportingContent = {
+                    Text(
+                        stringResource(R.string.split_ru_bypass_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = state.ruBypass,
+                        onCheckedChange = viewModel::setRuBypass,
+                    )
+                },
+            )
+            HorizontalDivider()
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
                     .fillMaxWidth()

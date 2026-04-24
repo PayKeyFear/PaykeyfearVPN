@@ -38,6 +38,8 @@
     <string name="split_desc_deny">Выбранные приложения идут в обход туннеля.</string>
     <string name="split_search_hint">Поиск приложений…</string>
     <string name="split_no_apps">Ничего не найдено.</string>
+    <string name="split_ru_bypass_title">Российские сайты мимо VPN</string>
+    <string name="split_ru_bypass_desc">Российские IP-адреса и домены подключаются напрямую, минуя туннель. Данные обновляются каждые 12 часов.</string>
     <string name="privacy_title">Политика конфиденциальности</string>
     <string name="privacy_subtitle">Что PaykeyfearVPN делает с вашими данными</string>
     <string name="privacy_last_updated">Обновлено: 19.04.2026</string>
