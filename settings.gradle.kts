@@ -26,6 +26,7 @@ rootProject.name = "PaykeyfearVPN"
 include(":app")
 include(":core")
 include(":core-config")
+include(":core-geo")
 include(":vpn-service")
 include(":protocols:awg")
 include(":protocols:vless")
