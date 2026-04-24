@@ -39,7 +39,11 @@ object XrayConfigBuilder {
                         "settings",
                         buildJsonObject {
                             put("auth", "noauth")
-                            put("udp", true)
+                            // UDP intentionally off: xjasonlyu/tun2socks v2.6.0
+                            // panics with "slice bounds out of range [:N] cap 2048"
+                            // on QUIC jumbo frames from gvisor. Browsers fall back
+                            // from HTTP/3 to HTTP/2 TCP cleanly.
+                            put("udp", false)
                         },
                     )
                     put(
