@@ -100,7 +100,12 @@ object XrayConfigBuilder {
                     put("streamSettings", streamSettings(config))
                 },
             )
-            add(buildJsonObject { put("tag", "direct"); put("protocol", "freedom") })
+            add(
+                buildJsonObject {
+                    put("tag", "direct")
+                    put("protocol", "freedom")
+                },
+            )
         }
 
     private fun streamSettings(config: ConnectionConfig.Vless): JsonObject =

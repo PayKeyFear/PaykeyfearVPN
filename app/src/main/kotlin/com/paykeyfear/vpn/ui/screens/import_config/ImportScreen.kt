@@ -170,8 +170,11 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
                     isSelected = selectedMethod == 2,
                     onClick = {
                         selectedMethod = 2
-                        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-                        if (granted) launchScanner() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        val granted = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.CAMERA,
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (granted) launchScanner()
+                        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     },
                 )
             }
@@ -282,7 +285,12 @@ private fun ImportMethodCard(
                 Text(title, style = MaterialTheme.typography.titleSmall, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                 Text(hint, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = if (isSelected) AccentGreen else TextMuted, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = if (isSelected) AccentGreen else TextMuted,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
@@ -383,7 +391,12 @@ private fun ConfigPreviewCard(preview: ConfigPreview) {
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.clip(RoundedCornerShape(4.dp)).background(dimColor).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                    Text(preview.protocol.displayName, style = MaterialTheme.typography.labelSmall, color = chipColor, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        preview.protocol.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = chipColor,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Text("${preview.host}:${preview.port}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
             }

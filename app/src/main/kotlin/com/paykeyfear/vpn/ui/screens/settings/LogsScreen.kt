@@ -112,6 +112,11 @@ private fun formatTime(ms: Long): String = TIME_FORMAT.format(Date(ms))
 
 private fun priorityLabel(p: Int): String =
     when (p) {
-        2 -> "V"; 3 -> "D"; 4 -> "I"; 5 -> "W"; 6 -> "E"; 7 -> "A"
+        2 -> "V"
+        3 -> "D"
+        4 -> "I"
+        5 -> "W"
+        6 -> "E"
+        7 -> "A"
         else -> "?"
     }

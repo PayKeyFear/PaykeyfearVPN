@@ -305,7 +305,10 @@ fun HomeScreen(
                         showErrorSheet = false
                         viewModel.toggle()
                     },
-                    onPickServer = { showErrorSheet = false; showServerPicker = true },
+                    onPickServer = {
+                        showErrorSheet = false
+                        showServerPicker = true
+                    },
                 )
             }
         }
@@ -395,10 +398,10 @@ private fun ConnectCircle(
     val buttonAlpha = if (isConnecting) buttonGlowAlpha else 1f
 
     Box(
-        modifier = modifier.size(220.dp),
+        modifier = modifier.size(240.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // Pulse rings (only when connected)
+        // Pulse rings — no pointer modifiers, touch-transparent by default
         if (isConnected) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2f, size.height / 2f)
@@ -416,7 +419,7 @@ private fun ConnectCircle(
             }
         }
 
-        // Outer ring / arc
+        // Outer ring / arc — touch-transparent (Canvas never consumes events)
         Canvas(modifier = Modifier.fillMaxSize()) {
             val strokeWidth = 3.dp.toPx()
             val radius = size.minDimension / 2f - strokeWidth / 2f
@@ -470,7 +473,7 @@ private fun ConnectCircle(
         }
         Box(
             modifier = Modifier
-                .size(148.dp)
+                .size(220.dp)
                 .graphicsLayer(alpha = buttonAlpha)
                 .clip(CircleShape)
                 .background(btnBrush)
@@ -816,7 +819,10 @@ private fun formatBytes(bytes: Long): String {
     val units = arrayOf("KiB", "MiB", "GiB", "TiB")
     var value = bytes.toDouble() / 1024
     var idx = 0
-    while (value >= 1024 && idx < units.lastIndex) { value /= 1024; idx++ }
+    while (value >= 1024 && idx < units.lastIndex) {
+        value /= 1024
+        idx++
+    }
     return "%.1f %s".format(value, units[idx])
 }
 

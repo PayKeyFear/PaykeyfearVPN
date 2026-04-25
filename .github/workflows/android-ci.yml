@@ -83,6 +83,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Grant execute on gradlew
+        run: chmod +x ./gradlew
+
       - name: Run Compose smoke tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:

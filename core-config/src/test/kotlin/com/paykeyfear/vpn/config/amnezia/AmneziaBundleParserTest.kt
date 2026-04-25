@@ -64,7 +64,8 @@ class AmneziaBundleParserTest {
 
     @Test
     fun `decodes base64 url bundle`() {
-        val inner = """{"defaultContainer":"amnezia-hysteria","description":"X","containers":[{"container":"amnezia-hysteria","last_config":"server: h:443\nauth: pw"}]}"""
+        val inner = """{"defaultContainer":"amnezia-hysteria","description":"X",""" +
+            """"containers":[{"container":"amnezia-hysteria","last_config":"server: h:443\nauth: pw"}]}"""
         val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(inner.toByteArray())
         val parsed = parser.parse(ConfigSource.Text("src", "vpn://$encoded")) as ConnectionConfig.Hysteria2
         assertThat(parsed.password).isEqualTo("pw")
@@ -73,7 +74,8 @@ class AmneziaBundleParserTest {
 
     @Test
     fun `accepts bare base64 bundle without vpn scheme`() {
-        val inner = """{"defaultContainer":"amnezia-hysteria","description":"X","containers":[{"container":"amnezia-hysteria","last_config":"server: h:443\nauth: pw"}]}"""
+        val inner = """{"defaultContainer":"amnezia-hysteria","description":"X",""" +
+            """"containers":[{"container":"amnezia-hysteria","last_config":"server: h:443\nauth: pw"}]}"""
         val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(inner.toByteArray())
         val src = ConfigSource.Text("src", encoded)
         assertThat(parser.canParse(src)).isTrue()

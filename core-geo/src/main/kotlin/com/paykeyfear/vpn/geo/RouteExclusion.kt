@@ -136,7 +136,7 @@ object RouteExclusion {
                 if (e > curEnd) curEnd = e
             } else {
                 out.add(curStart to curEnd)
-                curStart = s; curEnd = e
+                curStart = s\n                curEnd = e
             }
         }
         out.add(curStart to curEnd)
@@ -228,7 +228,7 @@ object RouteExclusion {
                 if (e > curEnd) curEnd = e
             } else {
                 out.add(curStart to curEnd)
-                curStart = s; curEnd = e
+                curStart = s\n                curEnd = e
             }
         }
         out.add(curStart to curEnd)

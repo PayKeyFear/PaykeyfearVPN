@@ -17,7 +17,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * `H1`..`H4`, `Jc`, etc. — rather than a WireGuard ini.
  */
 internal object AwgJsonToConf {
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
     fun convert(jsonText: String): String {
         val root = runCatching { json.parseToJsonElement(jsonText).jsonObject }

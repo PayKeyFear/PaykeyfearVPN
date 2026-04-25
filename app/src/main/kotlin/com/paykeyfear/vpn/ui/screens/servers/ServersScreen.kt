@@ -183,8 +183,14 @@ fun ServersScreen(viewModel: ServersViewModel = hiltViewModel()) {
         ) {
             ServerDetailSheet(
                 server = detailServer!!,
-                onConnect = { detailServer = null; viewModel.select(it) },
-                onDelete = { detailServer = null; viewModel.delete(it) },
+                onConnect = { id ->
+                    detailServer = null
+                    viewModel.select(id)
+                },
+                onDelete = { id ->
+                    detailServer = null
+                    viewModel.delete(id)
+                },
                 onDismiss = { detailServer = null },
             )
         }
@@ -417,10 +423,22 @@ private fun ServerDetailSheet(
             .padding(horizontal = 24.dp, vertical = 20.dp),
     ) {
         // Header
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 ProtocolBadge(server.protocol)
-                Text(server.displayName, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(
+                    server.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                )
             }
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Filled.Security, contentDescription = null, tint = TextMuted, modifier = Modifier.size(20.dp))
@@ -438,8 +456,17 @@ private fun ServerDetailSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("UUID", style = MaterialTheme.typography.bodySmall, color = TextMuted, modifier = Modifier.width(80.dp))
-                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "UUID",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted,
+                    modifier = Modifier.width(80.dp),
+                )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
                         text = if (showUuid) uuid else maskUuid(uuid),
                         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),

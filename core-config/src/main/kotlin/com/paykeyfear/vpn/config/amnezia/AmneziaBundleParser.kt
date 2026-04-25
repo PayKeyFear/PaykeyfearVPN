@@ -35,7 +35,10 @@ import java.util.zip.Inflater
  * JSON object (AmneziaVPN's current AWG format); we sniff and route.
  */
 class AmneziaBundleParser(
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    },
     private val awg: AwgConfParser = AwgConfParser(),
     private val vless: VlessUriParser = VlessUriParser(),
     private val hy2: Hysteria2YamlParser = Hysteria2YamlParser(),
