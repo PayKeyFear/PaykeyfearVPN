@@ -7,13 +7,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,47 +25,71 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import com.paykeyfear.vpn.R
 import com.paykeyfear.vpn.core.model.Protocol
+import com.paykeyfear.vpn.ui.theme.AccentGreen
+import com.paykeyfear.vpn.ui.theme.AccentGreenDim
+import com.paykeyfear.vpn.ui.theme.AwgGreen
+import com.paykeyfear.vpn.ui.theme.Blue
+import com.paykeyfear.vpn.ui.theme.BlueDim
+import com.paykeyfear.vpn.ui.theme.BorderColor
+import com.paykeyfear.vpn.ui.theme.DangerColor
+import com.paykeyfear.vpn.ui.theme.SurfaceBg
+import com.paykeyfear.vpn.ui.theme.SurfaceCard
+import com.paykeyfear.vpn.ui.theme.SurfaceCard2
+import com.paykeyfear.vpn.ui.theme.TextMuted
+import com.paykeyfear.vpn.ui.theme.TextPrimary
+import com.paykeyfear.vpn.viewmodel.ConfigPreview
 import com.paykeyfear.vpn.viewmodel.ImportViewModel
 
 @Composable
@@ -74,18 +97,15 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val filePicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) loadFromUri(context, uri, viewModel)
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) loadFromUri(context, uri, viewModel)
+    }
+    val qrScanner = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.takeIf { it.isNotBlank() }?.let { scanned ->
+            viewModel.onTextChanged(scanned)
+            viewModel.onImportClicked()
         }
-
-    val qrScanner =
-        rememberLauncherForActivityResult(ScanContract()) { result ->
-            result.contents?.takeIf { it.isNotBlank() }?.let { scanned ->
-                viewModel.onTextChanged(scanned)
-                viewModel.onImportClicked()
-            }
-        }
+    }
 
     fun launchScanner() {
         val opts = ScanOptions()
@@ -97,144 +117,276 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
         qrScanner.launch(opts)
     }
 
-    val cameraPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) launchScanner()
-        }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchScanner()
+    }
+
+    var selectedMethod by rememberSaveable { mutableStateOf<Int?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SurfaceBg)
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Bottom,
     ) {
-        // Quick-action cards row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ImportActionCard(
-                icon = Icons.Filled.ContentPaste,
-                label = stringResource(R.string.import_paste_clipboard),
-                modifier = Modifier.weight(1f),
-                onClick = { readClipboard(context)?.let(viewModel::onTextChanged) },
-            )
-            ImportActionCard(
-                icon = Icons.Filled.FolderOpen,
-                label = stringResource(R.string.import_open_file),
-                modifier = Modifier.weight(1f),
-                onClick = { filePicker.launch(arrayOf("*/*")) },
-            )
-            ImportActionCard(
-                icon = Icons.Filled.QrCodeScanner,
-                label = stringResource(R.string.import_scan_qr),
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    val granted = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.CAMERA,
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) launchScanner()
-                    else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                },
-            )
-        }
+        Spacer(Modifier.weight(1f))
 
-        OutlinedTextField(
-            value = state.text,
-            onValueChange = viewModel::onTextChanged,
-            modifier = Modifier.fillMaxWidth().height(200.dp),
-            label = { Text(stringResource(R.string.import_paste_hint)) },
-        )
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-        // Config preview card — appears as soon as the text parses successfully
-        AnimatedVisibility(
-            visible = state.preview != null,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut(),
-        ) {
-            state.preview?.let { preview ->
-                ConfigPreviewCard(preview = preview)
+            // Title
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Импорт конфигурации", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text("VLESS · AmneziaWG", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+            }
+
+            // Method cards
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ImportMethodCard(
+                    icon = Icons.Filled.ContentPaste,
+                    title = "Буфер обмена",
+                    hint = "Вставить из clipboard",
+                    isSelected = selectedMethod == 0,
+                    onClick = {
+                        selectedMethod = 0
+                        readClipboard(context)?.let(viewModel::onTextChanged)
+                    },
+                )
+                ImportMethodCard(
+                    icon = Icons.Filled.FolderOpen,
+                    title = "Файл",
+                    hint = ".conf, .json",
+                    isSelected = selectedMethod == 1,
+                    onClick = {
+                        selectedMethod = 1
+                        filePicker.launch(arrayOf("*/*"))
+                    },
+                )
+                ImportMethodCard(
+                    icon = Icons.Filled.QrCodeScanner,
+                    title = "QR-код",
+                    hint = "Сканировать камерой",
+                    isSelected = selectedMethod == 2,
+                    onClick = {
+                        selectedMethod = 2
+                        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                        if (granted) launchScanner() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    },
+                )
+            }
+
+            // OR divider
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.weight(1f).height(1.dp).background(BorderColor))
+                Text("ИЛИ ВСТАВЬТЕ ТЕКСТ", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                Box(Modifier.weight(1f).height(1.dp).background(BorderColor))
+            }
+
+            // TextField
+            ConfigTextField(
+                value = state.text,
+                onValueChange = viewModel::onTextChanged,
+                onClear = { viewModel.onTextChanged("") },
+            )
+
+            // Config preview
+            AnimatedVisibility(
+                visible = state.preview != null,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                state.preview?.let { ConfigPreviewCard(it) }
+            }
+
+            if (state.isImporting) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = AccentGreen, trackColor = SurfaceCard2)
+            }
+
+            state.error?.let {
+                Text(stringResource(R.string.import_error, it), color = DangerColor, style = MaterialTheme.typography.bodySmall)
+            }
+            state.importedName?.let {
+                Text(stringResource(R.string.import_success, it), color = AccentGreen, style = MaterialTheme.typography.bodySmall)
+            }
+
+            // Import button
+            val hasText = state.text.isNotBlank() && !state.isImporting
+            Button(
+                onClick = viewModel::onImportClicked,
+                enabled = hasText,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentGreen,
+                    contentColor = SurfaceBg,
+                    disabledContainerColor = SurfaceCard2,
+                    disabledContentColor = TextMuted,
+                ),
+            ) {
+                Text("Импортировать", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         }
+    }
+}
 
-        if (state.isImporting) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
+@Composable
+private fun ImportMethodCard(
+    icon: ImageVector,
+    title: String,
+    hint: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bgColor by animateColorAsState(
+        if (isSelected) Color(0xFF182A22) else SurfaceCard,
+        animationSpec = tween(200),
+        label = "card_bg",
+    )
+    val borderColor by animateColorAsState(
+        if (isSelected) AccentGreen else BorderColor,
+        animationSpec = tween(200),
+        label = "card_border",
+    )
 
-        Button(
-            onClick = viewModel::onImportClicked,
-            enabled = state.text.isNotBlank() && !state.isImporting,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.size(8.dp))
-            Text(stringResource(R.string.import_button))
-        }
-
-        state.error?.let {
-            Text(
-                stringResource(R.string.import_error, it),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(bgColor)
+            .clickable(
+                indication = ripple(bounded = true),
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onClick,
             )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        // Border overlay via outline
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.Transparent),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) AccentGreenDim else SurfaceCard2),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = if (isSelected) AccentGreen else TextMuted, modifier = Modifier.size(20.dp))
+            }
+            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                Text(hint, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = if (isSelected) AccentGreen else TextMuted, modifier = Modifier.size(18.dp))
         }
-        state.importedName?.let {
+    }
+}
+
+@Composable
+private fun ConfigTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onClear: () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val borderColor by animateColorAsState(
+        if (isFocused) AccentGreen else BorderColor,
+        animationSpec = tween(200),
+        label = "tf_border",
+    )
+    val bgColor by animateColorAsState(
+        if (isFocused) SurfaceCard2 else SurfaceCard,
+        animationSpec = tween(200),
+        label = "tf_bg",
+    )
+
+    Column {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(bgColor)
+                .padding(1.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(bgColor),
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+                    .onFocusChanged { isFocused = it.isFocused },
+                textStyle = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    color = TextPrimary,
+                    lineHeight = 18.sp,
+                ),
+                cursorBrush = SolidColor(AccentGreen),
+                decorationBox = { inner ->
+                    if (value.isEmpty()) {
+                        Text(
+                            "vless://... или полную конфигурацию",
+                            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = TextMuted),
+                        )
+                    }
+                    inner()
+                },
+            )
+            if (value.isNotEmpty()) {
+                IconButton(
+                    onClick = onClear,
+                    modifier = Modifier.align(Alignment.TopEnd).size(36.dp),
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+        if (value.isNotEmpty()) {
             Text(
-                stringResource(R.string.import_success, it),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodySmall,
+                "${value.length} символов",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
             )
         }
     }
 }
 
 @Composable
-private fun ImportActionCard(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(
-                indication = ripple(bounded = true),
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onClick,
-            ),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+private fun ConfigPreviewCard(preview: ConfigPreview) {
+    val (chipColor, dimColor) = when (preview.protocol) {
+        Protocol.AWG       -> AwgGreen to AccentGreenDim
+        Protocol.VLESS     -> Blue to BlueDim
+        Protocol.HYSTERIA2 -> AccentGreen to AccentGreenDim
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceCard)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        shape = CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
-                )
+        Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(20.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(preview.displayName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(dimColor).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                    Text(preview.protocol.displayName, style = MaterialTheme.typography.labelSmall, color = chipColor, fontWeight = FontWeight.SemiBold)
+                }
+                Text("${preview.host}:${preview.port}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
             }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                maxLines = 2,
-                minLines = 2,
-            )
         }
     }
 }
@@ -246,78 +398,8 @@ private fun readClipboard(context: Context): String? {
     return clip.getItemAt(0).coerceToText(context)?.toString()?.takeIf { it.isNotBlank() }
 }
 
-@Composable
-private fun ConfigPreviewCard(
-    preview: com.paykeyfear.vpn.viewmodel.ConfigPreview,
-    modifier: Modifier = Modifier,
-) {
-    val (chipColor, icon) = when (preview.protocol) {
-        Protocol.AWG -> Color(0xFF4CAF50) to Icons.Filled.Security
-        Protocol.VLESS -> Color(0xFF2196F3) to Icons.Filled.Language
-        Protocol.HYSTERIA2 -> Color(0xFFFF9800) to Icons.Filled.Speed
-    }
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = Color(0xFF4CAF50),
-                modifier = Modifier.size(22.dp),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = preview.displayName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = chipColor.copy(alpha = 0.15f),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Icon(icon, contentDescription = null, tint = chipColor, modifier = Modifier.size(11.dp))
-                            Text(preview.protocol.displayName, style = MaterialTheme.typography.labelSmall, color = chipColor)
-                        }
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                    ) {
-                        Text(
-                            "${preview.host}:${preview.port}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
 private fun loadFromUri(context: Context, uri: Uri, viewModel: ImportViewModel) {
     runCatching {
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            stream.bufferedReader().readText()
-        }
+        context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
     }.getOrNull()?.takeIf { it.isNotBlank() }?.let(viewModel::onTextChanged)
 }
