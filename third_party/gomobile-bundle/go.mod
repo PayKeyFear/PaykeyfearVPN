@@ -19,7 +19,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/apernet/hysteria/core/v2 v2.6.0 // indirect
 	github.com/apernet/hysteria/extras/v2 v2.6.0 // indirect
-	github.com/apernet/quic-go v0.59.1-0.20260217092621-db4786c77a22 // indirect
+	github.com/apernet/quic-go v0.59.1-0.20260330051153-c402ee641eb6 // indirect
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
