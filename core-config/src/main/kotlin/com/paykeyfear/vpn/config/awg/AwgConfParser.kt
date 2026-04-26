@@ -47,6 +47,7 @@ class AwgConfParser : ConfigParser {
 
     override fun parse(source: ConfigSource): ConnectionConfig {
         val text = source.text() ?: throw ConfigParseException("AWG parser requires text input")
+        val nameComment = extractNameComment(text)
         val sections = parseSections(text)
         val iface = sections["interface"] ?: throw ConfigParseException("Missing [Interface] section")
         val peer = sections["peer"] ?: throw ConfigParseException("Missing [Peer] section")
@@ -93,10 +94,16 @@ class AwgConfParser : ConfigParser {
                 itime = iface["itime"]?.toIntOrNull(),
             )
 
+        val endpoint = Endpoint.parse(endpointRaw)
+        val displayName = chooseDisplayName(
+            nameComment = nameComment,
+            sourceName = source.name,
+            endpointHost = endpoint.host,
+        )
         return ConnectionConfig.Awg(
             id = UUID.nameUUIDFromBytes(("awg:" + peerPublicKey + endpointRaw).toByteArray()).toString(),
-            displayName = source.name,
-            endpoint = Endpoint.parse(endpointRaw),
+            displayName = displayName,
+            endpoint = endpoint,
             privateKey = privateKey,
             peerPublicKey = peerPublicKey,
             presharedKey = presharedKey,
@@ -134,6 +141,47 @@ class AwgConfParser : ConfigParser {
     private fun String.splitCsv(): List<String> =
         split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
+    /**
+     * Pulls a human-readable name from an opening comment in the .conf
+     * file. Recognised forms (first match wins):
+     *   `# Name = My Server`
+     *   `# Name: My Server`
+     *   `# My Server`        (only when it sits above [Interface] and
+     *                         doesn't look like a generic header)
+     */
+    private fun extractNameComment(text: String): String? {
+        for (rawLine in text.lineSequence()) {
+            val line = rawLine.trim()
+            if (line.isEmpty()) continue
+            if (line.startsWith('[')) return null
+            if (!line.startsWith('#')) continue
+            val body = line.removePrefix("#").trim()
+            if (body.isEmpty()) continue
+            val nameMatch = NAME_COMMENT_RE.matchEntire(body)
+            if (nameMatch != null) return nameMatch.groupValues[1].trim().ifEmpty { null }
+            // Plain "# My Server" — accept only short single lines that
+            // don't look like editor banners ("---") or section dividers.
+            if (body.length in 2..40 && body.none { it == '=' || it == ':' } && body.any { it.isLetter() }) {
+                return body
+            }
+        }
+        return null
+    }
+
+    private fun chooseDisplayName(
+        nameComment: String?,
+        sourceName: String,
+        endpointHost: String,
+    ): String {
+        if (!nameComment.isNullOrBlank()) return nameComment
+        // Reject placeholder file names ("Pasted", "config", "wg.conf").
+        val cleanedSource = sourceName.removeSuffix(".conf").removeSuffix(".json").trim()
+        if (cleanedSource.isNotEmpty() && cleanedSource.lowercase() !in PLACEHOLDER_NAMES) {
+            return cleanedSource
+        }
+        return endpointHost
+    }
+
     private fun ConfigSource.text(): String? =
         when (this) {
             is ConfigSource.Text -> content
@@ -145,5 +193,9 @@ class AwgConfParser : ConfigParser {
         val INTERFACE_HEADER = Regex("""(?im)^\s*\[Interface]""")
         val PEER_HEADER = Regex("""(?im)^\s*\[Peer]""")
         val SECTION_RE = Regex("""\[([A-Za-z]+)]""")
+        val NAME_COMMENT_RE = Regex("""(?i)^name\s*[:=]\s*(.+)$""")
+        val PLACEHOLDER_NAMES = setOf(
+            "pasted", "config", "wg", "wg0", "awg", "awg0", "wireguard", "amneziawg",
+        )
     }
 }

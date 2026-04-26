@@ -80,6 +80,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -344,6 +345,12 @@ private fun ConnectCircle(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Spec: project_connect_button_animation.md.
+    // Container is fixed at 240 dp + a halo around it for the pulse rings —
+    // the button itself is exactly 240 dp in every state so there is no
+    // layout shift between OFF/CONNECTING/ON/DISCONNECTING. All animated
+    // layers (decorative ring, rotating arc, pulse rings) are drawn in a
+    // Compose Canvas which never consumes pointer events.
     val isConnecting = state == TunnelState.Connecting || state == TunnelState.Disconnecting
     val isConnected = state is TunnelState.Connected
 
@@ -368,7 +375,8 @@ private fun ConnectCircle(
         label = "btn_glow",
     )
 
-    // Pulse ring 1
+    // Pulse ring 1 — same size as the button, scales up to 1.15× while
+    // fading to 0 alpha. 2.4 s ease-out, infinite.
     val pulse1Scale by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1.15f,
         animationSpec = infiniteRepeatable(tween(2400, easing = EaseOut), RepeatMode.Restart),
@@ -379,7 +387,7 @@ private fun ConnectCircle(
         animationSpec = infiniteRepeatable(tween(2400, easing = EaseOut), RepeatMode.Restart),
         label = "pulse1_alpha",
     )
-    // Pulse ring 2 (delay simulated via longer period + offset)
+    // Pulse ring 2 — same as ring 1 but starts 600 ms later and reaches 1.28×.
     val pulse2Scale by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1.28f,
         animationSpec = infiniteRepeatable(
@@ -397,72 +405,95 @@ private fun ConnectCircle(
 
     val buttonAlpha = if (isConnecting) buttonGlowAlpha else 1f
 
+    // Outer container is bigger than the button so the pulse rings (max 1.28×)
+    // stay inside the layout box and don't get clipped or trigger a layout
+    // shift in the parent column.
     Box(
-        modifier = modifier.size(240.dp),
+        modifier = modifier.size(320.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // Pulse rings — no pointer modifiers, touch-transparent by default
+        // Pulse rings — no pointer modifiers, touch-transparent by default.
         if (isConnected) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            Canvas(modifier = Modifier.size(240.dp)) {
+                val strokeWidth = 2.dp.toPx()
                 val center = Offset(size.width / 2f, size.height / 2f)
-                val baseRadius = size.minDimension / 2f * 0.55f
+                val baseRadius = size.minDimension / 2f - strokeWidth / 2f
                 drawCircle(
                     color = AccentGreen.copy(alpha = pulse1Alpha),
                     radius = baseRadius * pulse1Scale,
                     center = center,
+                    style = Stroke(width = strokeWidth),
                 )
                 drawCircle(
                     color = AccentGreen.copy(alpha = pulse2Alpha),
                     radius = baseRadius * pulse2Scale,
                     center = center,
+                    style = Stroke(width = strokeWidth),
                 )
             }
         }
 
-        // Outer ring / arc — touch-transparent (Canvas never consumes events)
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        // Outer decorative ring + (optional) spinning arc. Drawn on a
+        // canvas that's slightly bigger than the button so the ring sits
+        // ~6 dp outside the circle edge and stays visible.
+        Canvas(modifier = Modifier.size(256.dp)) {
             val strokeWidth = 3.dp.toPx()
             val radius = size.minDimension / 2f - strokeWidth / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
 
-            if (isConnecting) {
-                // Dashed background ring
-                drawCircle(
-                    color = animatedRingColor.copy(alpha = 0.15f),
-                    radius = radius,
-                    center = center,
-                    style = Stroke(width = strokeWidth),
-                )
-                // Spinning arc
-                drawArc(
-                    color = animatedRingColor,
-                    startAngle = arcRotation,
-                    sweepAngle = 90f,
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                )
-            } else if (isConnected) {
-                drawCircle(
-                    color = animatedRingColor,
-                    radius = radius,
-                    center = center,
-                    style = Stroke(width = strokeWidth),
-                )
-            } else {
-                // Dashed ring for disconnected
-                drawCircle(
-                    color = BorderColor,
-                    radius = radius,
-                    center = center,
-                    style = Stroke(width = strokeWidth),
-                )
+            when {
+                isConnecting -> {
+                    drawCircle(
+                        color = animatedRingColor.copy(alpha = 0.4f),
+                        radius = radius,
+                        center = center,
+                        style = Stroke(width = strokeWidth),
+                    )
+                    drawArc(
+                        color = animatedRingColor,
+                        startAngle = arcRotation,
+                        sweepAngle = 120f,
+                        useCenter = false,
+                        topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f),
+                        size = androidx.compose.ui.geometry.Size(
+                            size.width - strokeWidth,
+                            size.height - strokeWidth,
+                        ),
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                    )
+                }
+                isConnected -> {
+                    drawCircle(
+                        color = animatedRingColor.copy(alpha = 0.8f),
+                        radius = radius,
+                        center = center,
+                        style = Stroke(width = strokeWidth),
+                    )
+                }
+                else -> {
+                    // Dashed gray ring (6/4 dash pattern, ~0.5 alpha) — uses
+                    // TextMuted as the base so it actually shows up against
+                    // the dark surface; BorderColor was too close to SurfaceBg.
+                    drawCircle(
+                        color = TextMuted.copy(alpha = 0.5f),
+                        radius = radius,
+                        center = center,
+                        style = Stroke(
+                            width = strokeWidth,
+                            pathEffect = PathEffect.dashPathEffect(
+                                floatArrayOf(6.dp.toPx(), 4.dp.toPx()),
+                                0f,
+                            ),
+                        ),
+                    )
+                }
             }
         }
 
-        // Button circle
+        // Button circle.
         val btnBrush = when {
             isConnected -> Brush.radialGradient(listOf(
-                Color(0xFF3DAA82), Color(0xFF1C5C40),
+                Color(0xFF1A4D38), Color(0xFF0D2B20),
             ))
             isConnecting -> Brush.radialGradient(listOf(
                 AmberColor.copy(alpha = 0.7f), AmberColor.copy(alpha = 0.3f),
@@ -473,12 +504,12 @@ private fun ConnectCircle(
         }
         Box(
             modifier = Modifier
-                .size(220.dp)
+                .size(240.dp)
                 .graphicsLayer(alpha = buttonAlpha)
                 .clip(CircleShape)
                 .background(btnBrush)
                 .clickable(
-                    enabled = enabled,
+                    enabled = enabled && !isConnecting,
                     indication = ripple(bounded = true),
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = onClick,

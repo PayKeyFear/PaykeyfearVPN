@@ -18,6 +18,7 @@
     <string name="import_scan_qr">Сканировать QR-код</string>
     <string name="import_scan_prompt">Наведите камеру на QR-код со ссылкой</string>
     <string name="import_success">Импортировано: %1$s</string>
+    <string name="import_name_label">Название сервера</string>
     <string name="import_error">Не удалось импортировать: %1$s</string>
     <string name="no_servers">Серверы пока не добавлены. Импортируйте конфигурацию, чтобы начать.</string>
     <string name="stats_up">↑ %1$s</string>

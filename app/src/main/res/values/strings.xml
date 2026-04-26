@@ -18,6 +18,7 @@
     <string name="import_scan_qr">Scan QR code</string>
     <string name="import_scan_prompt">Point the camera at the QR code with your share link</string>
     <string name="import_success">Imported: %1$s</string>
+    <string name="import_name_label">Server name</string>
     <string name="import_error">Import failed: %1$s</string>
     <string name="no_servers">No saved servers yet. Import a config to get started.</string>
     <string name="stats_up">↑ %1$s</string>

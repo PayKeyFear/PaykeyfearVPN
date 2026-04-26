@@ -29,6 +29,12 @@ data class ImportUiState(
     val importedName: String? = null,
     val error: String? = null,
     val preview: ConfigPreview? = null,
+    /**
+     * User-edited override for the parsed displayName. `null` means use the
+     * parser's pick; reset to `null` whenever a fresh preview parses (so a
+     * new import doesn't carry someone else's name).
+     */
+    val nameOverride: String? = null,
 )
 
 @HiltViewModel
@@ -43,8 +49,14 @@ class ImportViewModel
         val state: StateFlow<ImportUiState> = _state.asStateFlow()
 
         fun onTextChanged(text: String) {
-            _state.update { it.copy(text = text, error = null, importedName = null) }
+            _state.update {
+                it.copy(text = text, error = null, importedName = null, nameOverride = null)
+            }
             tryPreview(text)
+        }
+
+        fun onNameOverrideChanged(name: String) {
+            _state.update { it.copy(nameOverride = name) }
         }
 
         private fun tryPreview(text: String) {
@@ -68,18 +80,27 @@ class ImportViewModel
 
         fun onImportClicked() {
             val input = _state.value.text.takeIf { it.isNotBlank() } ?: return
+            val override = _state.value.nameOverride?.trim()?.takeIf { it.isNotEmpty() }
             _state.update { it.copy(isImporting = true, error = null) }
             viewModelScope.launch {
                 val result = runCatching {
                     val parsed = registry.parse(ConfigSource.Text("pasted", input))
-                    repository.upsert(parsed)
-                    preferences.setSelectedConfigId(parsed.id)
-                    parsed
+                    val final = if (override != null) parsed.withDisplayName(override) else parsed
+                    repository.upsert(final)
+                    preferences.setSelectedConfigId(final.id)
+                    final
                 }
                 _state.update { prev ->
                     result.fold(
                         onSuccess = { cfg ->
-                            prev.copy(isImporting = false, importedName = cfg.displayName, error = null, preview = null, text = "")
+                            prev.copy(
+                                isImporting = false,
+                                importedName = cfg.displayName,
+                                error = null,
+                                preview = null,
+                                text = "",
+                                nameOverride = null,
+                            )
                         },
                         onFailure = { err ->
                             prev.copy(isImporting = false, error = err.message ?: "Failed to import")
@@ -88,4 +109,11 @@ class ImportViewModel
                 }
             }
         }
+
+        private fun ConnectionConfig.withDisplayName(name: String): ConnectionConfig =
+            when (this) {
+                is ConnectionConfig.Awg -> copy(displayName = name)
+                is ConnectionConfig.Vless -> copy(displayName = name)
+                is ConnectionConfig.Hysteria2 -> copy(displayName = name)
+            }
     }

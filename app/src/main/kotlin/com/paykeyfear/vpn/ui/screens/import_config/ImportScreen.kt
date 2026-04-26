@@ -46,6 +46,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -199,7 +201,13 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut(),
             ) {
-                state.preview?.let { ConfigPreviewCard(it) }
+                state.preview?.let { preview ->
+                    ConfigPreviewCard(
+                        preview = preview,
+                        nameOverride = state.nameOverride ?: preview.displayName,
+                        onNameChange = viewModel::onNameOverrideChanged,
+                    )
+                }
             }
 
             if (state.isImporting) {
@@ -370,37 +378,56 @@ private fun ConfigTextField(
 }
 
 @Composable
-private fun ConfigPreviewCard(preview: ConfigPreview) {
+private fun ConfigPreviewCard(
+    preview: ConfigPreview,
+    nameOverride: String,
+    onNameChange: (String) -> Unit,
+) {
     val (chipColor, dimColor) = when (preview.protocol) {
         Protocol.AWG       -> AwgGreen to AccentGreenDim
         Protocol.VLESS     -> Blue to BlueDim
         Protocol.HYSTERIA2 -> AccentGreen to AccentGreenDim
     }
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(SurfaceCard)
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(20.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(preview.displayName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(dimColor).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                    Text(
-                        preview.protocol.displayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = chipColor,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Text("${preview.host}:${preview.port}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(20.dp))
+            Box(Modifier.clip(RoundedCornerShape(4.dp)).background(dimColor).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                Text(
+                    preview.protocol.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = chipColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
+            Spacer(Modifier.weight(1f))
+            Text("${preview.host}:${preview.port}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
         }
+        OutlinedTextField(
+            value = nameOverride,
+            onValueChange = onNameChange,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.import_name_label)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AccentGreen,
+                unfocusedBorderColor = BorderColor,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+                focusedLabelColor = AccentGreen,
+                unfocusedLabelColor = TextMuted,
+                cursorColor = AccentGreen,
+            ),
+        )
     }
 }
 
