@@ -76,6 +76,8 @@ androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+
 # Hilt
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
@@ -91,6 +93,8 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxing" }
+
+appcompat = "1.7.0"
 
 # Testing (unit)
 junit = { module = "junit:junit", version.ref = "junit" }

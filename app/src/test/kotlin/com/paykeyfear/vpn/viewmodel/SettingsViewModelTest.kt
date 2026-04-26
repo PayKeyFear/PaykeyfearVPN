@@ -29,28 +29,22 @@ class SettingsViewModelTest {
 
     @Test
     fun `state mirrors preferences`() = runTest(dispatcher) {
-        val prefs = FakePreferencesRepository(dynamicColor = false, connectOnBoot = true)
+        val prefs = FakePreferencesRepository(connectOnBoot = true)
         val vm = SettingsViewModel(prefs)
         vm.state.test {
             var s = awaitItem()
-            while (s.dynamicColorEnabled || !s.connectOnBoot) s = awaitItem()
-            assertThat(s.dynamicColorEnabled).isFalse()
+            while (!s.connectOnBoot) s = awaitItem()
             assertThat(s.connectOnBoot).isTrue()
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `setDynamicColor and setConnectOnBoot propagate to preferences`() = runTest(dispatcher) {
+    fun `setConnectOnBoot propagates to preferences`() = runTest(dispatcher) {
         val prefs = FakePreferencesRepository()
         val vm = SettingsViewModel(prefs)
-        vm.setDynamicColor(false)
         vm.setConnectOnBoot(true)
         dispatcher.scheduler.advanceUntilIdle()
-        prefs.dynamicColorEnabled.test {
-            assertThat(awaitItem()).isFalse()
-            cancelAndIgnoreRemainingEvents()
-        }
         prefs.connectOnBoot.test {
             assertThat(awaitItem()).isTrue()
             cancelAndIgnoreRemainingEvents()

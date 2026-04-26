@@ -31,7 +31,6 @@ private val DarkScheme = darkColorScheme(
 
 @Composable
 fun PaykeyfearTheme(
-    @Suppress("UNUSED_PARAMETER") dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(

@@ -8,21 +8,18 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class FakePreferencesRepository(
     selectedId: String? = null,
-    dynamicColor: Boolean = true,
     connectOnBoot: Boolean = false,
     splitMode: SplitTunnelMode = SplitTunnelMode.Off,
     splitPackages: Set<String> = emptySet(),
     ruBypass: Boolean = false,
 ) : PreferencesRepository {
     private val _selected = MutableStateFlow(selectedId)
-    private val _dynamicColor = MutableStateFlow(dynamicColor)
     private val _connectOnBoot = MutableStateFlow(connectOnBoot)
     private val _splitMode = MutableStateFlow(splitMode)
     private val _splitPackages = MutableStateFlow(splitPackages)
     private val _ruBypass = MutableStateFlow(ruBypass)
 
     override val selectedConfigId: Flow<String?> = _selected.asStateFlow()
-    override val dynamicColorEnabled: Flow<Boolean> = _dynamicColor.asStateFlow()
     override val connectOnBoot: Flow<Boolean> = _connectOnBoot.asStateFlow()
     override val splitTunnelMode: Flow<SplitTunnelMode> = _splitMode.asStateFlow()
     override val splitTunnelPackages: Flow<Set<String>> = _splitPackages.asStateFlow()
@@ -30,10 +27,6 @@ class FakePreferencesRepository(
 
     override suspend fun setSelectedConfigId(id: String?) {
         _selected.value = id
-    }
-
-    override suspend fun setDynamicColorEnabled(enabled: Boolean) {
-        _dynamicColor.value = enabled
     }
 
     override suspend fun setConnectOnBoot(enabled: Boolean) {

@@ -21,9 +21,6 @@ class DataStorePreferencesRepository
         override val selectedConfigId: Flow<String?> =
             dataStore.data.map { it[KEY_SELECTED_ID] }
 
-        override val dynamicColorEnabled: Flow<Boolean> =
-            dataStore.data.map { it[KEY_DYNAMIC_COLOR] ?: true }
-
         override val connectOnBoot: Flow<Boolean> =
             dataStore.data.map { it[KEY_CONNECT_ON_BOOT] ?: false }
 
@@ -40,10 +37,6 @@ class DataStorePreferencesRepository
             dataStore.edit { prefs ->
                 if (id == null) prefs.remove(KEY_SELECTED_ID) else prefs[KEY_SELECTED_ID] = id
             }
-        }
-
-        override suspend fun setDynamicColorEnabled(enabled: Boolean) {
-            dataStore.edit { it[KEY_DYNAMIC_COLOR] = enabled }
         }
 
         override suspend fun setConnectOnBoot(enabled: Boolean) {
@@ -64,7 +57,6 @@ class DataStorePreferencesRepository
 
         private companion object {
             val KEY_SELECTED_ID = stringPreferencesKey("selected_config_id")
-            val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
             val KEY_CONNECT_ON_BOOT = booleanPreferencesKey("connect_on_boot")
             val KEY_SPLIT_MODE = stringPreferencesKey("split_tunnel_mode")
             val KEY_SPLIT_PACKAGES = stringSetPreferencesKey("split_tunnel_packages")

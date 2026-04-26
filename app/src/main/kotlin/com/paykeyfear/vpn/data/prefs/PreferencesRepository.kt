@@ -6,8 +6,6 @@ import kotlinx.coroutines.flow.Flow
 interface PreferencesRepository {
     val selectedConfigId: Flow<String?>
 
-    val dynamicColorEnabled: Flow<Boolean>
-
     val connectOnBoot: Flow<Boolean>
 
     val splitTunnelMode: Flow<SplitTunnelMode>
@@ -17,8 +15,6 @@ interface PreferencesRepository {
     val ruBypassEnabled: Flow<Boolean>
 
     suspend fun setSelectedConfigId(id: String?)
-
-    suspend fun setDynamicColorEnabled(enabled: Boolean)
 
     suspend fun setConnectOnBoot(enabled: Boolean)
 

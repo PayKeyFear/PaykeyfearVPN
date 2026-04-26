@@ -23,9 +23,11 @@
     <string name="no_servers">Серверы пока не добавлены. Импортируйте конфигурацию, чтобы начать.</string>
     <string name="stats_up">↑ %1$s</string>
     <string name="stats_down">↓ %1$s</string>
-    <string name="settings_dynamic_color">Динамическая тема</string>
-    <string name="settings_dynamic_color_desc">Использовать палитру Material You из системы</string>
     <string name="settings_connect_on_boot">Подключаться при загрузке</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_system">Системный</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ru">Русский</string>
     <string name="settings_connect_on_boot_desc">Автоматически запускать туннель после перезагрузки</string>
     <string name="settings_about">О приложении</string>
     <string name="settings_version">Версия %1$s</string>

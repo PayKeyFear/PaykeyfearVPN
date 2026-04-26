@@ -23,9 +23,11 @@
     <string name="no_servers">No saved servers yet. Import a config to get started.</string>
     <string name="stats_up">↑ %1$s</string>
     <string name="stats_down">↓ %1$s</string>
-    <string name="settings_dynamic_color">Dynamic color</string>
-    <string name="settings_dynamic_color_desc">Match the system Material You palette</string>
     <string name="settings_connect_on_boot">Connect on boot</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ru">Русский</string>
     <string name="settings_connect_on_boot_desc">Start the tunnel automatically after reboot</string>
     <string name="settings_about">About</string>
     <string name="settings_version">Version %1$s</string>

@@ -5,8 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.lifecycleScope
 import com.paykeyfear.vpn.config.ConfigParserRegistry
 import com.paykeyfear.vpn.config.ConfigSource
@@ -31,8 +29,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val dynamicColor by preferences.dynamicColorEnabled.collectAsState(initial = true)
-            PaykeyfearTheme(dynamicColor = dynamicColor) {
+            PaykeyfearTheme {
                 PaykeyfearNavHost()
             }
         }

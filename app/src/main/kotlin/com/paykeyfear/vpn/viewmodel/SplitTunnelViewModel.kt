@@ -113,7 +113,7 @@ class SplitTunnelViewModel
         private suspend fun loadInstalledApps(): List<InstalledApp> =
             withContext(Dispatchers.IO) {
                 val pm = context.packageManager
-                pm.getInstalledPackages(PackageManager.GET_META_DATA)
+                pm.getInstalledPackages(PackageManager.GET_META_DATA or PackageManager.GET_PERMISSIONS)
                     .asSequence()
                     .filter { it.packageName != context.packageName }
                     .filter { pkg ->
