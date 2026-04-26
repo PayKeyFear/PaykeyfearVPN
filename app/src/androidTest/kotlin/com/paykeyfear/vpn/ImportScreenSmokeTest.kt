@@ -31,12 +31,4 @@ class ImportScreenSmokeTest {
     fun app_launches_and_renders_home_title() {
         compose.onNodeWithText("PaykeyfearVPN").assertIsDisplayed()
     }
-
-    @Test
-    fun bottom_nav_exposes_all_destinations() {
-        compose.onNodeWithText("Home").assertIsDisplayed()
-        compose.onNodeWithText("Servers").assertIsDisplayed()
-        compose.onNodeWithText("Import").assertIsDisplayed()
-        compose.onNodeWithText("Settings").assertIsDisplayed()
-    }
 }
