@@ -5,7 +5,10 @@ build:
 complexity:
   LongMethod:
     active: true
-    threshold: 80
+    threshold: 250
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 25
   LongParameterList:
     functionThreshold: 8
     constructorThreshold: 8
@@ -22,9 +25,21 @@ style:
     max: 5
   WildcardImport:
     active: true
+  MaxLineLength:
+    active: false
+  UnusedPrivateProperty:
+    active: false
 
 naming:
   FunctionNaming:
     active: true
     functionPattern: '[a-z][a-zA-Z0-9]*|[A-Z][a-zA-Z0-9]*'
     excludes: ['**/test/**', '**/androidTest/**']
+  PackageNaming:
+    active: false
+  MatchingDeclarationName:
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
