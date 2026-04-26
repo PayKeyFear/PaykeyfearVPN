@@ -56,8 +56,10 @@ object GeoUpdateScheduler {
             .build()
 
         val request = PeriodicWorkRequestBuilder<GeoUpdateWorker>(
-            INTERVAL_HOURS, TimeUnit.HOURS,
-            FLEX_HOURS, TimeUnit.HOURS,
+            INTERVAL_HOURS,
+            TimeUnit.HOURS,
+            FLEX_HOURS,
+            TimeUnit.HOURS,
         )
             .setConstraints(constraints)
             .addTag(GeoUpdateWorker.UNIQUE_NAME)

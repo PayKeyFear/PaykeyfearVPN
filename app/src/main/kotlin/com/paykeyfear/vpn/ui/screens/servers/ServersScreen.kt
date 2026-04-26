@@ -73,7 +73,6 @@ import com.paykeyfear.vpn.ui.theme.AmberColor
 import com.paykeyfear.vpn.ui.theme.AwgGreen
 import com.paykeyfear.vpn.ui.theme.Blue
 import com.paykeyfear.vpn.ui.theme.BlueDim
-import com.paykeyfear.vpn.ui.theme.BorderColor
 import com.paykeyfear.vpn.ui.theme.DangerColor
 import com.paykeyfear.vpn.ui.theme.DangerDim
 import com.paykeyfear.vpn.ui.theme.SurfaceBg
@@ -201,7 +200,8 @@ fun ServersScreen(viewModel: ServersViewModel = hiltViewModel()) {
 private fun PingButton(isPinging: Boolean, onClick: () -> Unit) {
     val infiniteTransition = rememberInfiniteTransition(label = "ping_spin")
     val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
+        initialValue = 0f,
+        targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Restart),
         label = "ping_rotation",
     )
@@ -291,33 +291,36 @@ private fun ServerCard(
 @Composable
 private fun PingBars(result: PingResult?, isPinging: Boolean) {
     val barColor = when {
-        isPinging        -> Color.Transparent
-        result == null   -> TextMuted.copy(alpha = 0.3f)
+        isPinging -> Color.Transparent
+        result == null -> TextMuted.copy(alpha = 0.3f)
         result.ms == null -> TextMuted.copy(alpha = 0.3f)
-        result.ms < 80   -> AccentGreen
-        result.ms < 180  -> AmberColor
-        else             -> DangerColor
+        result.ms < 80 -> AccentGreen
+        result.ms < 180 -> AmberColor
+        else -> DangerColor
     }
     val activeBars = when {
         result?.ms == null || isPinging -> 0
-        result.ms < 80  -> 3
+        result.ms < 80 -> 3
         result.ms < 180 -> 2
-        else            -> 1
+        else -> 1
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "ping_bars")
     val pulse0 by infiniteTransition.animateFloat(
-        0.7f, 1.3f,
+        0.7f,
+        1.3f,
         infiniteRepeatable(tween(800, easing = EaseInOut), RepeatMode.Reverse),
         label = "b0",
     )
     val pulse1 by infiniteTransition.animateFloat(
-        0.7f, 1.3f,
+        0.7f,
+        1.3f,
         infiniteRepeatable(tween(800, delayMillis = 200, easing = EaseInOut), RepeatMode.Reverse),
         label = "b1",
     )
     val pulse2 by infiniteTransition.animateFloat(
-        0.7f, 1.3f,
+        0.7f,
+        1.3f,
         infiniteRepeatable(tween(800, delayMillis = 400, easing = EaseInOut), RepeatMode.Reverse),
         label = "b2",
     )
@@ -356,13 +359,13 @@ private fun PingBars(result: PingResult?, isPinging: Boolean) {
 @Composable
 private fun ProtocolBadge(protocol: Protocol) {
     val (color, label) = when (protocol) {
-        Protocol.AWG       -> AwgGreen to "AWG"
-        Protocol.VLESS     -> Blue to "VLESS"
+        Protocol.AWG -> AwgGreen to "AWG"
+        Protocol.VLESS -> Blue to "VLESS"
         Protocol.HYSTERIA2 -> AmberColor to "HY2"
     }
     val dimColor = when (protocol) {
-        Protocol.AWG       -> AccentGreenDim
-        Protocol.VLESS     -> BlueDim
+        Protocol.AWG -> AccentGreenDim
+        Protocol.VLESS -> BlueDim
         Protocol.HYSTERIA2 -> Color(0xFF3D2E10)
     }
     Box(

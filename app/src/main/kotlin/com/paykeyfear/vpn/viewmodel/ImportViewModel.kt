@@ -9,12 +9,12 @@ import com.paykeyfear.vpn.core.model.Protocol
 import com.paykeyfear.vpn.data.prefs.PreferencesRepository
 import com.paykeyfear.vpn.data.repository.ConfigRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ConfigPreview(
     val displayName: String,
@@ -39,81 +39,81 @@ data class ImportUiState(
 
 @HiltViewModel
 class ImportViewModel
-    @Inject
-    constructor(
-        private val registry: ConfigParserRegistry,
-        private val repository: ConfigRepository,
-        private val preferences: PreferencesRepository,
-    ) : ViewModel() {
-        private val _state = MutableStateFlow(ImportUiState())
-        val state: StateFlow<ImportUiState> = _state.asStateFlow()
+@Inject
+constructor(
+    private val registry: ConfigParserRegistry,
+    private val repository: ConfigRepository,
+    private val preferences: PreferencesRepository,
+) : ViewModel() {
+    private val _state = MutableStateFlow(ImportUiState())
+    val state: StateFlow<ImportUiState> = _state.asStateFlow()
 
-        fun onTextChanged(text: String) {
-            _state.update {
-                it.copy(text = text, error = null, importedName = null, nameOverride = null)
-            }
-            tryPreview(text)
+    fun onTextChanged(text: String) {
+        _state.update {
+            it.copy(text = text, error = null, importedName = null, nameOverride = null)
         }
-
-        fun onNameOverrideChanged(name: String) {
-            _state.update { it.copy(nameOverride = name) }
-        }
-
-        private fun tryPreview(text: String) {
-            if (text.isBlank()) {
-                _state.update { it.copy(preview = null) }
-                return
-            }
-            viewModelScope.launch {
-                val preview = runCatching {
-                    val cfg = registry.parse(ConfigSource.Text("preview", text))
-                    ConfigPreview(
-                        displayName = cfg.displayName,
-                        protocol = cfg.protocol,
-                        host = cfg.endpoint.host,
-                        port = cfg.endpoint.port,
-                    )
-                }.getOrNull()
-                _state.update { it.copy(preview = preview) }
-            }
-        }
-
-        fun onImportClicked() {
-            val input = _state.value.text.takeIf { it.isNotBlank() } ?: return
-            val override = _state.value.nameOverride?.trim()?.takeIf { it.isNotEmpty() }
-            _state.update { it.copy(isImporting = true, error = null) }
-            viewModelScope.launch {
-                val result = runCatching {
-                    val parsed = registry.parse(ConfigSource.Text("pasted", input))
-                    val final = if (override != null) parsed.withDisplayName(override) else parsed
-                    repository.upsert(final)
-                    preferences.setSelectedConfigId(final.id)
-                    final
-                }
-                _state.update { prev ->
-                    result.fold(
-                        onSuccess = { cfg ->
-                            prev.copy(
-                                isImporting = false,
-                                importedName = cfg.displayName,
-                                error = null,
-                                preview = null,
-                                text = "",
-                                nameOverride = null,
-                            )
-                        },
-                        onFailure = { err ->
-                            prev.copy(isImporting = false, error = err.message ?: "Failed to import")
-                        },
-                    )
-                }
-            }
-        }
-
-        private fun ConnectionConfig.withDisplayName(name: String): ConnectionConfig =
-            when (this) {
-                is ConnectionConfig.Awg -> copy(displayName = name)
-                is ConnectionConfig.Vless -> copy(displayName = name)
-                is ConnectionConfig.Hysteria2 -> copy(displayName = name)
-            }
+        tryPreview(text)
     }
+
+    fun onNameOverrideChanged(name: String) {
+        _state.update { it.copy(nameOverride = name) }
+    }
+
+    private fun tryPreview(text: String) {
+        if (text.isBlank()) {
+            _state.update { it.copy(preview = null) }
+            return
+        }
+        viewModelScope.launch {
+            val preview = runCatching {
+                val cfg = registry.parse(ConfigSource.Text("preview", text))
+                ConfigPreview(
+                    displayName = cfg.displayName,
+                    protocol = cfg.protocol,
+                    host = cfg.endpoint.host,
+                    port = cfg.endpoint.port,
+                )
+            }.getOrNull()
+            _state.update { it.copy(preview = preview) }
+        }
+    }
+
+    fun onImportClicked() {
+        val input = _state.value.text.takeIf { it.isNotBlank() } ?: return
+        val override = _state.value.nameOverride?.trim()?.takeIf { it.isNotEmpty() }
+        _state.update { it.copy(isImporting = true, error = null) }
+        viewModelScope.launch {
+            val result = runCatching {
+                val parsed = registry.parse(ConfigSource.Text("pasted", input))
+                val final = if (override != null) parsed.withDisplayName(override) else parsed
+                repository.upsert(final)
+                preferences.setSelectedConfigId(final.id)
+                final
+            }
+            _state.update { prev ->
+                result.fold(
+                    onSuccess = { cfg ->
+                        prev.copy(
+                            isImporting = false,
+                            importedName = cfg.displayName,
+                            error = null,
+                            preview = null,
+                            text = "",
+                            nameOverride = null,
+                        )
+                    },
+                    onFailure = { err ->
+                        prev.copy(isImporting = false, error = err.message ?: "Failed to import")
+                    },
+                )
+            }
+        }
+    }
+
+    private fun ConnectionConfig.withDisplayName(name: String): ConnectionConfig =
+        when (this) {
+            is ConnectionConfig.Awg -> copy(displayName = name)
+            is ConnectionConfig.Vless -> copy(displayName = name)
+            is ConnectionConfig.Hysteria2 -> copy(displayName = name)
+        }
+}

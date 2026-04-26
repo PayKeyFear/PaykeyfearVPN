@@ -3,8 +3,8 @@ package com.paykeyfear.vpn.config.amnezia
 import com.google.common.truth.Truth.assertThat
 import com.paykeyfear.vpn.config.ConfigSource
 import com.paykeyfear.vpn.core.model.ConnectionConfig
-import java.util.Base64
 import org.junit.Test
+import java.util.Base64
 
 class AmneziaBundleParserTest {
     private val parser = AmneziaBundleParser()

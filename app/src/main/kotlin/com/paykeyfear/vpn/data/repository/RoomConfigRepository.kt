@@ -3,11 +3,11 @@ package com.paykeyfear.vpn.data.repository
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.data.local.ConfigDao
 import com.paykeyfear.vpn.data.local.ConfigEntity
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class RoomConfigRepository(

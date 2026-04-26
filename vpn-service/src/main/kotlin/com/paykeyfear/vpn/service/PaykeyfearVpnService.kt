@@ -15,7 +15,6 @@ import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
-import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import com.paykeyfear.vpn.core.Protector
 import com.paykeyfear.vpn.core.model.ConnectionConfig
@@ -25,7 +24,6 @@ import com.paykeyfear.vpn.core.model.TunnelStats
 import com.paykeyfear.vpn.geo.GeoCidr
 import com.paykeyfear.vpn.geo.RouteExclusion
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,11 +32,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Android foreground VpnService entry point. Owns the tun descriptor and
@@ -266,7 +265,11 @@ class PaykeyfearVpnService : VpnService() {
         }
         Timber.tag(TAG).i(
             "RU bypass: excludeRoute applied=%d failed=%d v4=%d v6=skipped (from raw v4=%d v6=%d)",
-            ok, failed, v4.size, ruBypass.ipv4.size, ruBypass.ipv6.size,
+            ok,
+            failed,
+            v4.size,
+            ruBypass.ipv4.size,
+            ruBypass.ipv6.size,
         )
     }
 

@@ -7,12 +7,12 @@ import com.paykeyfear.vpn.data.prefs.PreferencesRepository
 import com.paykeyfear.vpn.data.repository.ConfigRepository
 import com.paykeyfear.vpn.service.PaykeyfearVpnService
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Starts the selected tunnel after device boot when the user has enabled
@@ -29,7 +29,9 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
             intent.action != "android.intent.action.QUICKBOOT_POWERON"
-        ) return
+        ) {
+            return
+        }
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {

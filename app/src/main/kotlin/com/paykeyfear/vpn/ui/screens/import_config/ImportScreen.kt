@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -136,7 +135,6 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
         Spacer(Modifier.weight(1f))
 
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-
             // Title
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Импорт конфигурации", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
@@ -175,8 +173,11 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
                         val granted = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.CAMERA,
                         ) == PackageManager.PERMISSION_GRANTED
-                        if (granted) launchScanner()
-                        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        if (granted) {
+                            launchScanner()
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
                     },
                 )
             }
@@ -384,8 +385,8 @@ private fun ConfigPreviewCard(
     onNameChange: (String) -> Unit,
 ) {
     val (chipColor, dimColor) = when (preview.protocol) {
-        Protocol.AWG       -> AwgGreen to AccentGreenDim
-        Protocol.VLESS     -> Blue to BlueDim
+        Protocol.AWG -> AwgGreen to AccentGreenDim
+        Protocol.VLESS -> Blue to BlueDim
         Protocol.HYSTERIA2 -> AccentGreen to AccentGreenDim
     }
     Column(

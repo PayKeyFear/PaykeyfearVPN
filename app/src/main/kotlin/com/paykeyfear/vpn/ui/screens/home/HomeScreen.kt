@@ -12,7 +12,6 @@ import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -46,7 +45,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -150,8 +148,9 @@ fun HomeScreen(
         when (val current = event) {
             is HomeEvent.RequestVpnPermissionThenConnect -> {
                 val intent = VpnService.prepare(context)
-                if (intent != null) permissionLauncher.launch(intent)
-                else {
+                if (intent != null) {
+                    permissionLauncher.launch(intent)
+                } else {
                     startVpn(context, current.config)
                     viewModel.consumeEvent()
                 }
@@ -355,22 +354,24 @@ private fun ConnectCircle(
     val isConnected = state is TunnelState.Connected
 
     val ringColor = when {
-        isConnected  -> AccentGreen
+        isConnected -> AccentGreen
         isConnecting -> AmberColor
-        else         -> BorderColor
+        else -> BorderColor
     }
     val animatedRingColor by animateColorAsState(ringColor, tween(600), label = "ring_color")
 
     val infiniteTransition = rememberInfiniteTransition(label = "connect_anim")
 
     val arcRotation by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
+        initialValue = 0f,
+        targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart),
         label = "arc_rotation",
     )
 
     val buttonGlowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f, targetValue = 1f,
+        initialValue = 0.4f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1000, easing = EaseInOut), RepeatMode.Reverse),
         label = "btn_glow",
     )
@@ -378,27 +379,33 @@ private fun ConnectCircle(
     // Pulse ring 1 — same size as the button, scales up to 1.15× while
     // fading to 0 alpha. 2.4 s ease-out, infinite.
     val pulse1Scale by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 1.15f,
+        initialValue = 1f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(tween(2400, easing = EaseOut), RepeatMode.Restart),
         label = "pulse1_scale",
     )
     val pulse1Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f, targetValue = 0f,
+        initialValue = 0.6f,
+        targetValue = 0f,
         animationSpec = infiniteRepeatable(tween(2400, easing = EaseOut), RepeatMode.Restart),
         label = "pulse1_alpha",
     )
     // Pulse ring 2 — same as ring 1 but starts 600 ms later and reaches 1.28×.
     val pulse2Scale by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 1.28f,
+        initialValue = 1f,
+        targetValue = 1.28f,
         animationSpec = infiniteRepeatable(
-            tween(2400, delayMillis = 600, easing = EaseOut), RepeatMode.Restart,
+            tween(2400, delayMillis = 600, easing = EaseOut),
+            RepeatMode.Restart,
         ),
         label = "pulse2_scale",
     )
     val pulse2Alpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f, targetValue = 0f,
+        initialValue = 0.5f,
+        targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            tween(2400, delayMillis = 600, easing = EaseOut), RepeatMode.Restart,
+            tween(2400, delayMillis = 600, easing = EaseOut),
+            RepeatMode.Restart,
         ),
         label = "pulse2_alpha",
     )
@@ -492,15 +499,24 @@ private fun ConnectCircle(
 
         // Button circle.
         val btnBrush = when {
-            isConnected -> Brush.radialGradient(listOf(
-                Color(0xFF1A4D38), Color(0xFF0D2B20),
-            ))
-            isConnecting -> Brush.radialGradient(listOf(
-                AmberColor.copy(alpha = 0.7f), AmberColor.copy(alpha = 0.3f),
-            ))
-            else -> Brush.radialGradient(listOf(
-                SurfaceCard2, SurfaceBg,
-            ))
+            isConnected -> Brush.radialGradient(
+                listOf(
+                    Color(0xFF1A4D38),
+                    Color(0xFF0D2B20),
+                ),
+            )
+            isConnecting -> Brush.radialGradient(
+                listOf(
+                    AmberColor.copy(alpha = 0.7f),
+                    AmberColor.copy(alpha = 0.3f),
+                ),
+            )
+            else -> Brush.radialGradient(
+                listOf(
+                    SurfaceCard2,
+                    SurfaceBg,
+                ),
+            )
         }
         Box(
             modifier = Modifier
@@ -528,9 +544,9 @@ private fun ConnectCircle(
                     imageVector = if (connected) Icons.Filled.Lock else Icons.Filled.LockOpen,
                     contentDescription = null,
                     tint = when {
-                        connected  -> AccentGreen
+                        connected -> AccentGreen
                         isConnecting -> AmberColor
-                        else       -> TextMuted
+                        else -> TextMuted
                     },
                     modifier = Modifier.size(52.dp),
                 )
@@ -612,7 +628,7 @@ private fun StatisticsCard(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(
-                Brush.linearGradient(listOf(Color(0xFF1A2840), Color(0xFF131826)))
+                Brush.linearGradient(listOf(Color(0xFF1A2840), Color(0xFF131826))),
             )
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
@@ -667,14 +683,14 @@ private fun SplitTunnelCard(
     modifier: Modifier = Modifier,
 ) {
     val modeLabel = when (mode) {
-        SplitTunnelMode.Off       -> stringResource(R.string.split_mode_off)
+        SplitTunnelMode.Off -> stringResource(R.string.split_mode_off)
         SplitTunnelMode.Allowlist -> stringResource(R.string.split_mode_allow)
-        SplitTunnelMode.Denylist  -> stringResource(R.string.split_mode_deny)
+        SplitTunnelMode.Denylist -> stringResource(R.string.split_mode_deny)
     }
     val subtitle = when (mode) {
-        SplitTunnelMode.Off       -> stringResource(R.string.split_desc_off)
+        SplitTunnelMode.Off -> stringResource(R.string.split_desc_off)
         SplitTunnelMode.Allowlist -> "$selectedCount ${stringResource(R.string.split_mode_allow).lowercase()}"
-        SplitTunnelMode.Denylist  -> "$selectedCount ${stringResource(R.string.split_mode_deny).lowercase()}"
+        SplitTunnelMode.Denylist -> "$selectedCount ${stringResource(R.string.split_mode_deny).lowercase()}"
     }
     Box(
         modifier = modifier

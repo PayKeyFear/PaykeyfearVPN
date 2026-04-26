@@ -23,7 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dpimport androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -37,10 +38,8 @@ import com.paykeyfear.vpn.ui.screens.settings.PrivacyPolicyScreen
 import com.paykeyfear.vpn.ui.screens.settings.SettingsScreen
 import com.paykeyfear.vpn.ui.screens.settings.SplitTunnelScreen
 import com.paykeyfear.vpn.ui.theme.AccentGreen
-import com.paykeyfear.vpn.ui.theme.BorderColor
 import com.paykeyfear.vpn.ui.theme.SurfaceCard
 import com.paykeyfear.vpn.ui.theme.TextMuted
-import com.paykeyfear.vpn.ui.theme.TextPrimary
 
 enum class Destination(val route: String, val label: String, val inBottomBar: Boolean = true) {
     Home("home", "Home"),
@@ -138,9 +137,9 @@ fun PaykeyfearNavHost() {
 }
 
 private fun Destination.icon() = when (this) {
-    Destination.Home      -> Icons.Filled.Home
-    Destination.Servers   -> Icons.Filled.Storage
-    Destination.Import    -> Icons.Filled.Download
-    Destination.Settings  -> Icons.Filled.Settings
-    else                  -> Icons.Filled.Settings
+    Destination.Home -> Icons.Filled.Home
+    Destination.Servers -> Icons.Filled.Storage
+    Destination.Import -> Icons.Filled.Download
+    Destination.Settings -> Icons.Filled.Settings
+    else -> Icons.Filled.Settings
 }

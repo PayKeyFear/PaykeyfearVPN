@@ -7,8 +7,8 @@ import com.paykeyfear.vpn.core.model.AwgJunkParams
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.Endpoint
 import com.paykeyfear.vpn.core.model.Protocol
-import java.util.UUID
 import timber.log.Timber
+import java.util.UUID
 
 /**
  * Parses AmneziaWG / WireGuard `.conf` format:
@@ -195,7 +195,14 @@ class AwgConfParser : ConfigParser {
         val SECTION_RE = Regex("""\[([A-Za-z]+)]""")
         val NAME_COMMENT_RE = Regex("""(?i)^name\s*[:=]\s*(.+)$""")
         val PLACEHOLDER_NAMES = setOf(
-            "pasted", "config", "wg", "wg0", "awg", "awg0", "wireguard", "amneziawg",
+            "pasted",
+            "config",
+            "wg",
+            "wg0",
+            "awg",
+            "awg0",
+            "wireguard",
+            "amneziawg",
         )
     }
 }
