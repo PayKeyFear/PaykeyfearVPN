@@ -94,8 +94,6 @@ okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxing" }
 
-appcompat = "1.7.0"
-
 # Testing (unit)
 junit = { module = "junit:junit", version.ref = "junit" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
