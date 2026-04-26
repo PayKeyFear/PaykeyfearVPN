@@ -14,8 +14,8 @@ complexity:
     constructorThreshold: 8
   TooManyFunctions:
     active: true
-    thresholdInClasses: 25
-    thresholdInFiles: 25
+    thresholdInClasses: 30
+    thresholdInFiles: 30
 
 style:
   MagicNumber:

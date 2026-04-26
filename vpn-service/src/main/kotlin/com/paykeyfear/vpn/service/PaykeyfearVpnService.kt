@@ -367,7 +367,7 @@ class PaykeyfearVpnService : VpnService() {
         }
     }
 
-    private fun applyDns(builder: Builder, config: ConnectionConfig, ruBypass: RuBypassConfig) {
+    private fun applyDns(builder: Builder, config: ConnectionConfig, @Suppress("UNUSED_PARAMETER") ruBypass: RuBypassConfig) {
         // RU bypass is IP-based (excludeRoute), not DNS-based. Earlier we
         // also front-loaded Yandex DNS (77.88.8.8) hoping it would return
         // RU-local CDN IPs for global services — but that hurt YouTube and
