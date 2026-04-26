@@ -92,4 +92,4 @@ jobs:
           api-level: 31
           target: google_apis
           arch: x86_64
-          script: ./gradlew connectedDebugAndroidTest -PandroidTestOrchestrator=true
+          script: ./gradlew :app:connectedDebugAndroidTest -PandroidTestOrchestrator=true
