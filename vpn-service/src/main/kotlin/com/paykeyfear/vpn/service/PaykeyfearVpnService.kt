@@ -175,7 +175,14 @@ class PaykeyfearVpnService : VpnService() {
             val ruBypass = runCatching { settings.ruBypass() }.getOrDefault(RuBypassConfig.OFF)
             val builder = Builder()
                 .setSession(config.displayName)
-                .setMtu(configMtu(config))
+                // RU bypass adds throw routes to the TUN. Cronet (YouTube)
+                // sees the resulting network as "split routing" and
+                // refuses to do PMTU discovery — AWG headers fragment
+                // QUIC packets and Onesie hangs with InterruptedIOException.
+                // Drop MTU to the IPv6 minimum (1280) when bypass is on
+                // so QUIC's initial packets always fit; idle without bypass
+                // keeps the AWG-config MTU.
+                .setMtu(if (ruBypass.enabled) BYPASS_MTU else configMtu(config))
             applyRoutes(builder, ruBypass)
             applyAddresses(builder, config)
             applyDns(builder, config, ruBypass)
@@ -240,27 +247,46 @@ class PaykeyfearVpnService : VpnService() {
         builder.addRoute("0.0.0.0", 0)
         builder.addRoute("::", 0)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        // v2fly's raw RU list is ~21k entries, which blows past the ~1 MB
-        // Binder parcel cap on VpnService establishVpn with 2 MB of routes.
-        // Coarsen to /16 on v4 and /32 on v6, then aggregate adjacent
-        // ranges, dropping the count by 30-60x. Over-coverage is fine for
-        // regional bypass — the only cost is a few non-RU IPs that happen
-        // to sit inside the same /16 as RU also skip the tunnel.
-        val v4 = RouteExclusion.aggregateIpv4(RouteExclusion.coarsenIpv4(ruBypass.ipv4, COARSEN_V4))
-        val v6 = RouteExclusion.aggregateIpv6(RouteExclusion.coarsenIpv6(ruBypass.ipv6, COARSEN_V6))
+        // v2fly's raw RU list is ~21k entries. Binder establishVpn caps at
+        // ~1 MB and downstream NetworkMonitorManager broadcasts the route
+        // list to its observers — those broadcasts blow up much earlier
+        // (~650 KB) and after a few failures Android tears the VPN down.
+        // Empirically a hard cap below ~600 routes keeps the broadcasts
+        // alive. We progressively coarsen v4 prefixes (/16 → /12 → /10)
+        // until the v4 entry count falls under [MAX_EXCLUDE_ENTRIES_V4],
+        // and skip v6 for the same reason — mobile carriers are usually
+        // v4 anyway and v6 dual-stack would push us back over the cap.
+        val v4 = aggregateUnderCap(ruBypass.ipv4, MAX_EXCLUDE_ENTRIES_V4)
         var ok = 0
         var failed = 0
-        val addExclude = fun(cidr: GeoCidr) {
+        v4.forEach { cidr ->
             runCatching {
                 builder.excludeRoute(android.net.IpPrefix(java.net.InetAddress.getByName(cidr.address), cidr.prefixLength))
             }.onSuccess { ok++ }.onFailure { failed++ }
         }
-        v4.forEach(addExclude)
-        v6.forEach(addExclude)
         Timber.tag(TAG).i(
-            "RU bypass: excludeRoute applied=%d failed=%d v4=%d v6=%d (from raw v4=%d v6=%d)",
-            ok, failed, v4.size, v6.size, ruBypass.ipv4.size, ruBypass.ipv6.size,
+            "RU bypass: excludeRoute applied=%d failed=%d v4=%d v6=skipped (from raw v4=%d v6=%d)",
+            ok, failed, v4.size, ruBypass.ipv4.size, ruBypass.ipv6.size,
         )
+    }
+
+    private fun aggregateUnderCap(cidrs: List<GeoCidr>, maxEntries: Int): List<GeoCidr> {
+        for (prefix in COARSEN_LADDER_V4) {
+            val coarse = RouteExclusion.coarsenIpv4(cidrs, prefix)
+            // Strip well-known global CDN ranges (Google, Cloudflare,
+            // Akamai etc.) that coarsening picks up as collateral. RU users
+            // bypassing these direct hit RKN's TCP block on googlevideo /
+            // similar — keeps YouTube and friends going through the tunnel.
+            val withoutGlobal = RouteExclusion.subtractIpv4(coarse, GLOBAL_CDN_KEEP_TUNNELED)
+            val agg = RouteExclusion.aggregateIpv4(withoutGlobal)
+            if (agg.size <= maxEntries) {
+                Timber.tag(TAG).d("RU bypass: coarsen /%d → %d entries (cap %d)", prefix, agg.size, maxEntries)
+                return agg
+            }
+        }
+        // Final fallback: coarsest /8 — should always fit but very lossy.
+        val coarse = RouteExclusion.coarsenIpv4(cidrs, 8)
+        return RouteExclusion.aggregateIpv4(RouteExclusion.subtractIpv4(coarse, GLOBAL_CDN_KEEP_TUNNELED))
     }
 
     /** API < 33: Builder has no excludeRoute — use the precomputed complement as addRoute list. */
@@ -339,26 +365,52 @@ class PaykeyfearVpnService : VpnService() {
     }
 
     private fun applyDns(builder: Builder, config: ConnectionConfig, ruBypass: RuBypassConfig) {
-        // When RU bypass is on we front-load Yandex DNS (77.88.8.8) so DNS
-        // traffic itself goes direct (77.88.0.0/16 is in excludeRoute), and
-        // Yandex answers with RU-local CDN IPs that land inside the bypass
-        // list. Without this, the tunnel's Cloudflare resolver sees the VPN
-        // exit IP and returns non-RU CDN IPs for ya.ru, vk.com, etc., which
-        // defeats the whole bypass.
-        val dns = when {
-            ruBypass.enabled -> RU_BYPASS_DNS + defaultDnsFor(config)
-            else -> defaultDnsFor(config)
-        }
-        dns.forEach(builder::addDnsServer)
+        // RU bypass is IP-based (excludeRoute), not DNS-based. Earlier we
+        // also front-loaded Yandex DNS (77.88.8.8) hoping it would return
+        // RU-local CDN IPs for global services — but that hurt YouTube and
+        // similar services badly: Yandex sees the user's real RU IP and
+        // returns the RU-blocked Google CDN, those IPs sit inside our RU
+        // bypass list (v2fly geoip:google ⊂ ru), so YouTube traffic exits
+        // direct from RU and the upstream blocks it. Authoritative records
+        // for genuine RU sites (ya.ru, vk.com, mail.ru) point at RU /16s
+        // regardless of which resolver asks, so the IP-level bypass keeps
+        // working without the DNS hack.
+        defaultDnsFor(config).forEach(builder::addDnsServer)
     }
 
     private fun defaultDnsFor(config: ConnectionConfig): List<String> =
         when (config) {
-            is ConnectionConfig.Awg -> config.dns.ifEmpty { DEFAULT_DNS }
+            // AmneziaVPN AWG bundles often include AmneziaDNS (172.29.x.x)
+            // as the first resolver. AmneziaDNS returns NXDOMAIN for
+            // YouTube's per-session CDN hostnames (r1---sn-XXX.googlevideo.com),
+            // and Android's system resolver does NOT fall back to the next
+            // server on NXDOMAIN — so video playback stalls. Push private
+            // resolvers (10/172.16-31/192.168) to the back of the list so a
+            // public DNS is tried first.
+            is ConnectionConfig.Awg -> reorderPrivateDnsLast(config.dns).ifEmpty { DEFAULT_DNS }
             is ConnectionConfig.Vless,
             is ConnectionConfig.Hysteria2,
             -> DEFAULT_DNS
         }
+
+    private fun reorderPrivateDnsLast(dns: List<String>): List<String> {
+        if (dns.isEmpty()) return dns
+        val (public_, private_) = dns.partition { !isPrivateIpv4(it) }
+        return public_ + private_
+    }
+
+    private fun isPrivateIpv4(addr: String): Boolean {
+        val parts = addr.split('.')
+        if (parts.size != 4) return false
+        val a = parts[0].toIntOrNull() ?: return false
+        val b = parts[1].toIntOrNull() ?: return false
+        return when {
+            a == 10 -> true
+            a == 172 && b in 16..31 -> true
+            a == 192 && b == 168 -> true
+            else -> false
+        }
+    }
 
     private fun startAsForeground() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -446,11 +498,108 @@ class PaykeyfearVpnService : VpnService() {
         private const val NOTIFICATION_ID = 0x50_56_4E_01
         private const val DEFAULT_MTU = 1420
 
+        // IPv6 minimum MTU (RFC 8200). Used when RU bypass is on to make
+        // QUIC packets tolerant of any extra encapsulation along the path.
+        private const val BYPASS_MTU = 1280
+
         // Aggressive RU-bypass coarsening to fit under the Binder 1 MB
         // establishVpn parcel cap. /16 + /32 empirically drops 21 448 v4
         // entries to ~300 and 9 000 v6 entries to ~200.
         private const val COARSEN_V4 = 16
         private const val COARSEN_V6 = 32
+
+        // Hard cap on excludeRoute entries we feed to VpnService.Builder.
+        // The Binder establishVpn parcel itself can hold up to ~1 MB but
+        // downstream NetworkMonitorManager broadcasts the same route list
+        // and dies at ~650 KB (~150 B per IpPrefix in the parcel). Skipping
+        // v6 entirely (mobile is v4) keeps the v4 /16 list (~1.4 k entries
+        // = ~210 KB) well under the cap, so we don't have to coarsen further.
+        // A 500-entry cap forced /10–/12 coarsening which over-covered
+        // Google's CDN ranges and broke YouTube — leave headroom instead.
+        private const val MAX_EXCLUDE_ENTRIES_V4 = 2000
+
+        // Progressive coarsening ladder for the v4 RU CIDR set. Tried in
+        // order; first prefix whose aggregated size fits MAX_EXCLUDE_ENTRIES_V4
+        // wins. /16 is the floor — anything coarser starts catching huge
+        // non-RU CDN ranges (Google, Cloudflare) and bypass turns into a
+        // YouTube-killer.
+        private val COARSEN_LADDER_V4 = intArrayOf(16, 15, 14)
+
+        // Global CDN ranges that must NEVER bypass the tunnel — even if
+        // they happen to fall inside a coarsened RU /16 (74.124.x is RU,
+        // 74.125.x is Google's videoplayback CDN, both share /15). RU
+        // users routing these direct hit RKN's TCP block on googlevideo /
+        // googleapis and YouTube/ads/Onesie hang. Sourced from the public
+        // gstatic.com/ipranges/goog.json (Google AS15169) plus
+        // 1.1.1.0/24, 1.0.0.0/24 (Cloudflare DNS) for the same reason.
+        private val GLOBAL_CDN_KEEP_TUNNELED: List<GeoCidr> = listOf(
+            // Cloudflare 1.1.1.1 / 1.0.0.1
+            GeoCidr("1.0.0.0", 24, false),
+            GeoCidr("1.1.1.0", 24, false),
+            // Google AS15169 — keep blocks that overlap with v2fly RU /16s.
+            GeoCidr("8.8.4.0", 24, false),
+            GeoCidr("8.8.8.0", 24, false),
+            GeoCidr("8.34.208.0", 20, false),
+            GeoCidr("8.35.192.0", 20, false),
+            GeoCidr("23.236.48.0", 20, false),
+            GeoCidr("23.251.128.0", 19, false),
+            GeoCidr("34.0.0.0", 9, false),
+            GeoCidr("34.128.0.0", 10, false),
+            GeoCidr("35.184.0.0", 13, false),
+            GeoCidr("35.192.0.0", 14, false),
+            GeoCidr("35.196.0.0", 15, false),
+            GeoCidr("35.198.0.0", 16, false),
+            GeoCidr("35.199.0.0", 17, false),
+            GeoCidr("35.199.128.0", 18, false),
+            GeoCidr("35.200.0.0", 13, false),
+            GeoCidr("35.208.0.0", 12, false),
+            GeoCidr("35.224.0.0", 12, false),
+            GeoCidr("35.240.0.0", 13, false),
+            GeoCidr("64.15.112.0", 20, false),
+            GeoCidr("64.233.160.0", 19, false),
+            GeoCidr("66.22.228.0", 23, false),
+            GeoCidr("66.102.0.0", 20, false),
+            GeoCidr("66.249.64.0", 19, false),
+            GeoCidr("70.32.128.0", 19, false),
+            GeoCidr("72.14.192.0", 18, false),
+            GeoCidr("74.114.24.0", 21, false),
+            GeoCidr("74.125.0.0", 16, false),
+            GeoCidr("104.154.0.0", 15, false),
+            GeoCidr("104.196.0.0", 14, false),
+            GeoCidr("104.237.160.0", 19, false),
+            GeoCidr("107.167.160.0", 19, false),
+            GeoCidr("107.178.192.0", 18, false),
+            GeoCidr("108.59.80.0", 20, false),
+            GeoCidr("108.170.192.0", 18, false),
+            GeoCidr("108.177.0.0", 17, false),
+            GeoCidr("130.211.0.0", 16, false),
+            GeoCidr("136.112.0.0", 12, false),
+            GeoCidr("142.250.0.0", 15, false),
+            GeoCidr("146.148.0.0", 17, false),
+            GeoCidr("162.216.148.0", 22, false),
+            GeoCidr("162.222.176.0", 21, false),
+            GeoCidr("172.110.32.0", 21, false),
+            GeoCidr("172.217.0.0", 16, false),
+            GeoCidr("172.253.0.0", 16, false),
+            GeoCidr("173.194.0.0", 16, false),
+            GeoCidr("173.255.112.0", 20, false),
+            GeoCidr("192.158.28.0", 22, false),
+            GeoCidr("192.178.0.0", 15, false),
+            GeoCidr("193.186.4.0", 24, false),
+            GeoCidr("199.36.154.0", 23, false),
+            GeoCidr("199.36.156.0", 24, false),
+            GeoCidr("199.192.112.0", 22, false),
+            GeoCidr("199.223.232.0", 21, false),
+            GeoCidr("207.223.160.0", 20, false),
+            GeoCidr("208.65.152.0", 22, false),
+            GeoCidr("208.68.108.0", 22, false),
+            GeoCidr("208.81.188.0", 22, false),
+            GeoCidr("208.117.224.0", 19, false),
+            GeoCidr("209.85.128.0", 17, false),
+            GeoCidr("216.58.192.0", 19, false),
+            GeoCidr("216.73.80.0", 20, false),
+            GeoCidr("216.239.32.0", 19, false),
+        )
 
         // tun2socks engine MTU above; matches what we ask Go for.
         private const val VLESS_MTU = 1500
@@ -461,11 +610,10 @@ class PaykeyfearVpnService : VpnService() {
 
         private val DEFAULT_DNS = listOf("1.1.1.1", "8.8.8.8")
 
-        // Yandex public resolvers live at 77.88.8.8 / 77.88.8.1 (77.88.0.0/16
-        // lands inside the coarsened RU bypass list, so DNS queries themselves
-        // go direct, Yandex sees the user's real RU IP, and returns RU-local
-        // CDN answers that also fall inside the bypass.
-        private val RU_BYPASS_DNS = listOf("77.88.8.8", "77.88.8.1")
+        // Standard AmneziaVPN AmneziaDNS docker bridge IP. Always reachable
+        // through the AWG tunnel when the operator enabled the AmneziaDNS
+        // container — falls through silently if not.
+        private const val AMNEZIA_DNS = "172.29.172.254"
 
         private val SYNTHETIC_OVERLAY_ADDRESSES = listOf(
             "172.19.0.2/32",

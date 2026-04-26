@@ -97,6 +97,7 @@ class AwgTunnel(
             append(" peerPubKeySet=").append(config.peerPublicKey.isNotBlank())
             append(" psk=").append(config.presharedKey != null)
             append(" addrs=").append(config.addresses.size)
+            append(" dns=").append(if (config.dns.isEmpty()) "<empty>" else config.dns.joinToString(","))
             append(" allowed=").append(config.allowedIps.size)
             append(" mtu=").append(config.mtu ?: "default")
             append(" keepalive=").append(config.persistentKeepalive ?: "none")

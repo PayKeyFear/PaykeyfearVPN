@@ -33,6 +33,53 @@ object RouteExclusion {
         return merged.flatMap { (start, end) -> decomposeV4(start, end) }
     }
 
+    /**
+     * Subtracts an IPv4 CIDR set from another. Used to keep specific
+     * provider ranges (e.g. Google AS15169) out of the RU bypass list
+     * after coarsening picks them up as collateral — without this, RU
+     * users hit RKN's googlevideo TCP block when YouTube CDN IPs that
+     * happen to live next to RU /24s get routed direct.
+     */
+    fun subtractIpv4(target: Collection<GeoCidr>, exclude: Collection<GeoCidr>): List<GeoCidr> {
+        val targetRanges = target.asSequence()
+            .filter { !it.isIpv6 }
+            .mapNotNull(::toRangeV4)
+            .sortedBy { it.first }
+            .toList()
+        if (targetRanges.isEmpty()) return emptyList()
+        val excludeMerged = run {
+            val raw = exclude.asSequence()
+                .filter { !it.isIpv6 }
+                .mapNotNull(::toRangeV4)
+                .sortedBy { it.first }
+                .toMutableList()
+            if (raw.isEmpty()) emptyList() else mergeRanges(raw)
+        }
+        if (excludeMerged.isEmpty()) {
+            return targetRanges.flatMap { (s, e) -> decomposeV4(s, e) }
+        }
+        val result = ArrayList<Pair<Long, Long>>()
+        for ((tStart, tEnd) in targetRanges) {
+            var remaining = listOf(tStart to tEnd)
+            for ((eStart, eEnd) in excludeMerged) {
+                if (eStart > tEnd) break
+                if (eEnd < tStart) continue
+                remaining = remaining.flatMap { (s, e) ->
+                    when {
+                        eEnd < s || eStart > e -> listOf(s to e)
+                        eStart <= s && eEnd >= e -> emptyList()
+                        eStart <= s -> listOf((eEnd + 1) to e)
+                        eEnd >= e -> listOf(s to (eStart - 1))
+                        else -> listOf(s to (eStart - 1), (eEnd + 1) to e)
+                    }
+                }
+                if (remaining.isEmpty()) break
+            }
+            result.addAll(remaining)
+        }
+        return result.flatMap { (s, e) -> decomposeV4(s, e) }
+    }
+
     fun aggregateIpv6(cidrs: Collection<GeoCidr>): List<GeoCidr> {
         val ranges = cidrs.asSequence()
             .filter { it.isIpv6 }
@@ -136,7 +183,8 @@ object RouteExclusion {
                 if (e > curEnd) curEnd = e
             } else {
                 out.add(curStart to curEnd)
-                curStart = s\n                curEnd = e
+                curStart = s
+                curEnd = e
             }
         }
         out.add(curStart to curEnd)
@@ -228,7 +276,8 @@ object RouteExclusion {
                 if (e > curEnd) curEnd = e
             } else {
                 out.add(curStart to curEnd)
-                curStart = s\n                curEnd = e
+                curStart = s
+                curEnd = e
             }
         }
         out.add(curStart to curEnd)
