@@ -24,6 +24,7 @@ class VlessTunnel(
     // Baseline bytes sampled at the moment the tunnel starts, so we
     // report bytes transferred *this session* rather than cumulative.
     @Volatile private var baselineRx: Long = 0L
+
     @Volatile private var baselineTx: Long = 0L
 
     override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector) {
@@ -99,4 +100,3 @@ class VlessTunnel(
         private const val TAG = "VlessTunnel"
     }
 }
-

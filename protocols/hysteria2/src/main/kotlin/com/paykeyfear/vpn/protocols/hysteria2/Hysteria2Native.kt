@@ -1,8 +1,8 @@
 package com.paykeyfear.vpn.protocols.hysteria2
 
 import com.paykeyfear.vpn.core.Protector
-import java.lang.reflect.Method
 import timber.log.Timber
+import java.lang.reflect.Method
 
 /**
  * Reflective bridge to the gomobile-generated `hy2mobile.Hy2mobile` Java
