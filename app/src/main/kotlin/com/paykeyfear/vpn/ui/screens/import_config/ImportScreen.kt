@@ -141,7 +141,12 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Title
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.import_title), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.import_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                )
                 Text(stringResource(R.string.import_subtitle), style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
 

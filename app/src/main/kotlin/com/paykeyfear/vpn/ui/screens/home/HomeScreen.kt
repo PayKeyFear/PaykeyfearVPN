@@ -215,7 +215,11 @@ fun HomeScreen(
             }
             val effectiveState = if (
                 localConnecting && state.tunnelState == TunnelState.Disconnected
-            ) TunnelState.Connecting else state.tunnelState
+            ) {
+                TunnelState.Connecting
+            } else {
+                state.tunnelState
+            }
 
             ConnectCircle(
                 state = effectiveState,
@@ -379,18 +383,18 @@ private fun ConnectCircle(
     // smoothly instead of cutting instantly when state changes.
     val btnCenterColor by animateColorAsState(
         when {
-            isConnected  -> Color(0xFF1A4D38)
+            isConnected -> Color(0xFF1A4D38)
             isConnecting -> AmberColor.copy(alpha = 0.7f)
-            else         -> SurfaceCard2
+            else -> SurfaceCard2
         },
         tween(600),
         label = "btn_center",
     )
     val btnEdgeColor by animateColorAsState(
         when {
-            isConnected  -> Color(0xFF0D2B20)
+            isConnected -> Color(0xFF0D2B20)
             isConnecting -> AmberColor.copy(alpha = 0.3f)
-            else         -> SurfaceBg
+            else -> SurfaceBg
         },
         tween(600),
         label = "btn_edge",

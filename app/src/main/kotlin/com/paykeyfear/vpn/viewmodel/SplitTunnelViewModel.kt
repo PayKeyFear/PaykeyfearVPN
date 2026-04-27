@@ -65,9 +65,10 @@ constructor(
             apps,
             combine(loading, query, tunnelController.state) { l, q, ts -> Triple(l, q, ts) },
         ) { mode, pkgs, ruBypass, list, (isLoading, q, tunnelState) ->
+            // selected first (false < true), then user apps, then alpha
             val sorted = list.sortedWith(
                 compareBy(
-                    { it.packageName !in pkgs }, // selected first (false < true)
+                    { it.packageName !in pkgs },
                     { it.isSystem },
                     { it.label.lowercase() },
                 ),

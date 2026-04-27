@@ -41,10 +41,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.paykeyfear.vpn.R
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
-import com.paykeyfear.vpn.ui.theme.AccentGreen
 import com.paykeyfear.vpn.ui.theme.AmberColor
 import com.paykeyfear.vpn.ui.theme.DangerColor
-import com.paykeyfear.vpn.ui.theme.SurfaceCard
 import com.paykeyfear.vpn.ui.theme.TextMuted
 import com.paykeyfear.vpn.viewmodel.SplitTunnelViewModel
 
