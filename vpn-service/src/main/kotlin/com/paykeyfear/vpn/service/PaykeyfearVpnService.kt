@@ -602,6 +602,94 @@ class PaykeyfearVpnService : VpnService() {
             GeoCidr("216.58.192.0", 19, false),
             GeoCidr("216.73.80.0", 20, false),
             GeoCidr("216.239.32.0", 19, false),
+            // Telegram AS62041 / AS59930 — RKN throttles Telegram TCP
+            // from RU IPs since 2024, so messenger reconnects fail when
+            // these ranges happen to fall inside coarsened bypass blocks.
+            GeoCidr("91.105.192.0", 23, false),
+            GeoCidr("91.108.4.0", 22, false),
+            GeoCidr("91.108.8.0", 21, false),
+            GeoCidr("91.108.12.0", 22, false),
+            GeoCidr("91.108.16.0", 21, false),
+            GeoCidr("91.108.20.0", 22, false),
+            GeoCidr("91.108.56.0", 22, false),
+            GeoCidr("95.161.64.0", 20, false),
+            GeoCidr("149.154.160.0", 20, false),
+            GeoCidr("185.76.151.0", 24, false),
+            // Meta / Facebook (Instagram, WhatsApp) — same story.
+            GeoCidr("31.13.24.0", 21, false),
+            GeoCidr("31.13.64.0", 18, false),
+            GeoCidr("66.220.144.0", 20, false),
+            GeoCidr("69.63.176.0", 20, false),
+            GeoCidr("69.171.224.0", 19, false),
+            GeoCidr("74.119.76.0", 22, false),
+            GeoCidr("102.132.96.0", 20, false),
+            GeoCidr("103.4.96.0", 22, false),
+            GeoCidr("129.134.0.0", 16, false),
+            GeoCidr("147.75.208.0", 20, false),
+            GeoCidr("157.240.0.0", 16, false),
+            GeoCidr("169.150.224.0", 19, false),
+            GeoCidr("169.230.0.0", 16, false),
+            GeoCidr("173.252.64.0", 18, false),
+            GeoCidr("179.60.192.0", 22, false),
+            GeoCidr("185.60.216.0", 22, false),
+            GeoCidr("185.89.216.0", 22, false),
+            GeoCidr("199.201.64.0", 22, false),
+            GeoCidr("204.15.20.0", 22, false),
+            // Cloudflare CDN (1.1.1.0/24 and 1.0.0.0/24 already above).
+            GeoCidr("104.16.0.0", 13, false),
+            GeoCidr("104.24.0.0", 14, false),
+            GeoCidr("172.64.0.0", 13, false),
+            GeoCidr("131.0.72.0", 22, false),
+            GeoCidr("141.101.64.0", 18, false),
+            GeoCidr("162.158.0.0", 15, false),
+            GeoCidr("173.245.48.0", 20, false),
+            GeoCidr("188.114.96.0", 20, false),
+            GeoCidr("190.93.240.0", 20, false),
+            GeoCidr("197.234.240.0", 22, false),
+            GeoCidr("198.41.128.0", 17, false),
+            // Twitter / X (AS13414) — blocked in RU.
+            GeoCidr("104.244.40.0", 21, false),
+            GeoCidr("192.133.76.0", 22, false),
+            GeoCidr("199.16.156.0", 22, false),
+            GeoCidr("199.59.148.0", 22, false),
+            // LinkedIn (AS14413) — blocked in RU.
+            GeoCidr("108.174.0.0", 20, false),
+            GeoCidr("144.2.0.0", 16, false),
+            // Discord (uses own AS49544 + Cloudflare) — blocked in RU since 2024.
+            GeoCidr("162.159.128.0", 17, false),
+            // Apple (AS714) — owns the entirety of 17/8 so keep that block
+            // tunneled wholesale; AppStore/iCloud/APNs run on subranges of it.
+            GeoCidr("17.0.0.0", 8, false),
+            // Microsoft (AS8075) — Outlook / Office / Skype / Teams. Pick the
+            // service-relevant /14-/16 blocks; not the whole 20/8 Azure range
+            // (Azure hosts plenty of RU-bound origins too).
+            GeoCidr("13.64.0.0", 11, false),
+            GeoCidr("13.96.0.0", 13, false),
+            GeoCidr("23.96.0.0", 13, false),
+            GeoCidr("40.64.0.0", 10, false),
+            GeoCidr("52.96.0.0", 12, false),
+            GeoCidr("65.52.0.0", 14, false),
+            GeoCidr("104.40.0.0", 13, false),
+            GeoCidr("131.107.0.0", 16, false),
+            GeoCidr("132.245.0.0", 16, false),
+            GeoCidr("134.170.0.0", 16, false),
+            GeoCidr("137.135.0.0", 16, false),
+            GeoCidr("138.91.0.0", 16, false),
+            GeoCidr("157.55.0.0", 16, false),
+            GeoCidr("168.61.0.0", 16, false),
+            GeoCidr("168.62.0.0", 15, false),
+            GeoCidr("191.232.0.0", 13, false),
+            GeoCidr("207.46.0.0", 16, false),
+            // GitHub (AS36459).
+            GeoCidr("140.82.112.0", 20, false),
+            GeoCidr("143.55.64.0", 20, false),
+            GeoCidr("185.199.108.0", 22, false),
+            GeoCidr("192.30.252.0", 22, false),
+            // Spotify (AS8403) own ranges (Fastly 151.101/16 left out — too
+            // broad, hosts many RU sites too).
+            GeoCidr("35.186.224.0", 20, false),
+            GeoCidr("78.31.8.0", 21, false),
+            GeoCidr("78.31.16.0", 21, false),
         )
 
         // tun2socks engine MTU above; matches what we ask Go for.

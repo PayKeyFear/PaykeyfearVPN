@@ -60,3 +60,6 @@ Thumbs.db
 
 # Scratch file used for multi-line commit messages on Windows
 /.commitmsg
+
+# Claude Code project-local data — settings, memory, task locks
+/.claude/
