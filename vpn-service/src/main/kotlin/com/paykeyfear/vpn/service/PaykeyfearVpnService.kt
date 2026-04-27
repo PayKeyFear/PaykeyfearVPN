@@ -15,6 +15,7 @@ import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import com.paykeyfear.vpn.core.Protector
 import com.paykeyfear.vpn.core.model.ConnectionConfig
@@ -192,16 +193,15 @@ class PaykeyfearVpnService : VpnService() {
                 stopSelf()
                 return@launch
             }
-            // detachFd() releases the JVM wrapper's ownership of the fd;
-            // we then immediately close the (now empty) PFD. From this
-            // point on, the fd is owned exclusively by the native backend,
-            // which closes it in both success (Stop) and failure (Start
-            // error path) paths. We must NOT close it from Kotlin — the
-            // fd number may already be recycled, and a double-close trips
-            // fdsan with SIGABRT on the binder thread.
+            // fdsan: detach the JVM wrapper so Java no longer tracks fd N,
+            // then dup N→M and close N immediately. Go receives M; when its
+            // daemon thread closes M on disconnect, fd N has already been
+            // freed and possibly recycled by the graphics stack — closing M
+            // (a different number) avoids the fdsan "close of owned fd" SIGABRT.
             val nativeFd = pfd.detachFd()
-            runCatching { pfd.close() }
-            runCatching { controller.start(config, nativeFd, protector()) }.onFailure {
+            val tunFdForGo = ParcelFileDescriptor.fromFd(nativeFd).detachFd()
+            ParcelFileDescriptor.adoptFd(nativeFd).close()
+            runCatching { controller.start(config, tunFdForGo, protector()) }.onFailure {
                 Timber.e(it, "Tunnel failed")
                 stopSelf()
             }

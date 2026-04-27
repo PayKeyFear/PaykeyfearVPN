@@ -31,8 +31,8 @@ android {
         applicationId = "com.paykeyfear.vpn"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 5
+        versionName = "1.0.5"
 
         testInstrumentationRunner = "com.paykeyfear.vpn.HiltTestRunner"
         vectorDrawables.useSupportLibrary = true
@@ -78,6 +78,22 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+
+    // Rename APK outputs: PaykeyfearVPN-<baseVersion>-<buildType>.apk
+    // versionName for debug includes the "-debug" suffix already, so we use
+    // defaultConfig.versionName (the bare version) and append the build type.
+    val baseVersion = defaultConfig.versionName ?: "0.0.0"
+
+    // Rename AAB: base name drives the .aab filename (<base>-release.aab).
+    setProperty("archivesBaseName", "PaykeyfearVPN-$baseVersion")
+    applicationVariants.all {
+        val variantBuildType = buildType.name
+        outputs
+            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                output.outputFileName = "PaykeyfearVPN-$baseVersion-$variantBuildType.apk"
+            }
     }
 
     compileOptions {
