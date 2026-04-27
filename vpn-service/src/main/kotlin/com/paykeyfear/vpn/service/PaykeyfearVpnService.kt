@@ -17,7 +17,6 @@ import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
-import com.paykeyfear.vpn.service.R
 import com.paykeyfear.vpn.core.Protector
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
