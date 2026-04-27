@@ -173,7 +173,12 @@ class PaykeyfearVpnService : VpnService() {
             runCatching { controller.stop() }
 
             val split = runCatching { settings.splitTunnel() }.getOrDefault(SplitTunnelConfig.OFF)
-            val ruBypass = runCatching { settings.ruBypass() }.getOrDefault(RuBypassConfig.OFF)
+            val ruBypassRaw = runCatching { settings.ruBypass() }.getOrDefault(RuBypassConfig.OFF)
+            val ruBypass = if (ruBypassRaw.enabled) {
+                ruBypassRaw.copy(ipv4 = (ruBypassRaw.ipv4 + RU_EXTRA_BYPASS).distinctBy { "${it.address}/${it.prefixLength}" })
+            } else {
+                ruBypassRaw
+            }
             val builder = Builder()
                 .setSession(config.displayName)
                 // RU bypass adds throw routes to the TUN. Cronet (YouTube)
@@ -695,6 +700,23 @@ class PaykeyfearVpnService : VpnService() {
             GeoCidr("35.186.224.0", 20, false),
             GeoCidr("78.31.8.0", 21, false),
             GeoCidr("78.31.16.0", 21, false),
+        )
+
+        // Extra RU infrastructure ranges absent from v2fly/geoip:ru —
+        // verified by RIPE whois (all country:RU, Russian orgs).
+        private val RU_EXTRA_BYPASS: List<GeoCidr> = listOf(
+            // Yandex AS13238 — enterprise block missing from v2fly
+            GeoCidr("5.45.192.0", 18, false),
+            // NGENIX LLC Moscow — CDN for gosuslugi, aeroflot, cian, wink, RT
+            GeoCidr("212.193.144.0", 21, false),
+            GeoCidr("212.193.152.0", 21, false),
+            // CDNvideo LLC Moscow — smotrim.ru, rutube, wink.ru
+            GeoCidr("91.231.234.0", 23, false),
+            GeoCidr("91.231.236.0", 22, false),
+            GeoCidr("91.238.108.0", 22, false),
+            GeoCidr("91.240.168.0", 22, false),
+            GeoCidr("151.236.64.0", 18, false),
+            GeoCidr("185.31.112.0", 22, false),
         )
 
         // tun2socks engine MTU above; matches what we ask Go for.

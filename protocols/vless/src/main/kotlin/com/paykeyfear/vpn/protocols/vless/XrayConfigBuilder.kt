@@ -54,6 +54,19 @@ object XrayConfigBuilder {
                                 add(JsonPrimitive("domain:yandex.net"))
                                 add(JsonPrimitive("domain:yastatic.net"))
                                 add(JsonPrimitive("domain:yandex-team.ru"))
+                                // OK.ru social network
+                                add(JsonPrimitive("domain:ok.ru"))
+                                // Sberbank
+                                add(JsonPrimitive("domain:sber.ru"))
+                                add(JsonPrimitive("domain:sbrf.ru"))
+                                add(JsonPrimitive("domain:sberbank.com"))
+                                // Tinkoff / T-Bank
+                                add(JsonPrimitive("domain:tbank.ru"))
+                                add(JsonPrimitive("domain:tinkoff.ru"))
+                                // 2ip — RU IP checker
+                                add(JsonPrimitive("domain:2ip.ru"))
+                                // Rutube video
+                                add(JsonPrimitive("domain:rutube.ru"))
                             },
                         )
                         put("outboundTag", "direct")

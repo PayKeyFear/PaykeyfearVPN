@@ -29,6 +29,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -182,14 +183,19 @@ fun HomeScreen(
         containerColor = SurfaceBg,
         snackbarHost = { SnackbarHost(snackbar) },
     ) { inner ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(inner),
         ) {
+            val circleScale = if (maxHeight < 700.dp) 0.7f else 1f
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
             Text(
                 stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
@@ -229,6 +235,7 @@ fun HomeScreen(
                     if (state.tunnelState == TunnelState.Disconnected) localConnecting = true
                     viewModel.toggle()
                 },
+                modifier = Modifier.graphicsLayer(scaleX = circleScale, scaleY = circleScale),
             )
 
             Spacer(Modifier.height(12.dp))
@@ -313,7 +320,8 @@ fun HomeScreen(
                 onClick = onSplitTunnelClick,
                 modifier = Modifier.fillMaxWidth(),
             )
-        }
+        } // Column
+        } // BoxWithConstraints
 
         if (showServerPicker) {
             ModalBottomSheet(
@@ -351,7 +359,7 @@ fun HomeScreen(
                 )
             }
         }
-    }
+    } // Scaffold
 }
 
 @Composable
@@ -389,6 +397,8 @@ private fun ConnectCircle(
     // layout shift between OFF/CONNECTING/ON/DISCONNECTING. All animated
     // layers (decorative ring, rotating arc, pulse rings) are drawn in a
     // Compose Canvas which never consumes pointer events.
+    // On small screens (available height < 700 dp) scale the whole circle
+    // down so the rest of the content fits without scrolling.
     val isConnecting = state == TunnelState.Connecting || state == TunnelState.Disconnecting
     val isConnected = state is TunnelState.Connected
 

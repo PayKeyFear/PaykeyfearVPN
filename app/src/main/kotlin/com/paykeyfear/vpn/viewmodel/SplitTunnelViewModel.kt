@@ -38,10 +38,10 @@ data class SplitTunnelUiState(
 ) {
     val filtered: List<InstalledApp> =
         if (query.isBlank()) {
-            apps
+            apps.filter { !it.isSystem }
         } else {
             val q = query.trim().lowercase()
-            apps.filter { it.label.lowercase().contains(q) || it.packageName.lowercase().contains(q) }
+            apps.filter { !it.isSystem && (it.label.lowercase().contains(q) || it.packageName.lowercase().contains(q)) }
         }
 }
 
