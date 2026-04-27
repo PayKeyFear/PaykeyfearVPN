@@ -10,6 +10,18 @@
     <string name="status_disconnected">Отключено</string>
     <string name="status_connecting">Подключение…</string>
     <string name="status_connected">Подключено</string>
+
+    <!-- VPN foreground notification -->
+    <string name="notif_channel_name">VPN-туннель</string>
+    <string name="notif_channel_desc">Показывает статус активного VPN-соединения</string>
+    <string name="notif_title_connecting">Подключение…</string>
+    <string name="notif_title_connected">Подключено — %1$s</string>
+    <string name="notif_title_disconnecting">Отключение…</string>
+    <string name="notif_title_idle">PaykeyfearVPN</string>
+    <string name="notif_text_starting">Запуск туннеля…</string>
+    <string name="notif_text_stats">↓ %1$s   ↑ %2$s</string>
+    <string name="notif_text_error">Ошибка: %1$s</string>
+    <string name="notif_action_disconnect">Отключиться</string>
     <string name="status_error">Ошибка</string>
     <string name="import_subtitle">VLESS · AmneziaWG</string>
     <string name="import_or_divider">ИЛИ ВСТАВЬТЕ ТЕКСТ</string>

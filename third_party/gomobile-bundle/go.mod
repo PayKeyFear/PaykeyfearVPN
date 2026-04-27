@@ -17,8 +17,8 @@ require (
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/amnezia-vpn/amneziawg-go v0.2.17 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/apernet/hysteria/core/v2 v2.6.0 // indirect
-	github.com/apernet/hysteria/extras/v2 v2.6.0 // indirect
+	github.com/apernet/hysteria/core/v2 v2.8.1 // indirect
+	github.com/apernet/hysteria/extras/v2 v2.8.1 // indirect
 	github.com/apernet/quic-go v0.59.1-0.20260330051153-c402ee641eb6 // indirect
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect

@@ -54,6 +54,7 @@ type Protector interface {
 // multiple times; the most recent value wins. Must be called before
 // StartXray when running on Android.
 func SetProtector(p Protector) {
+	downgradeAdreno()
 	if p == nil {
 		protector.Store(protectorHolder{p: noopProtector{}})
 		return

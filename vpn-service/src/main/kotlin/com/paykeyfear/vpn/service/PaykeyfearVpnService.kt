@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
+import com.paykeyfear.vpn.service.R
 import com.paykeyfear.vpn.core.Protector
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
@@ -428,11 +429,10 @@ class PaykeyfearVpnService : VpnService() {
     private fun startAsForeground() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
-                NotificationChannel(CHANNEL_ID, "VPN Tunnel", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Active VPN tunnel"
-                    setShowBadge(false)
-                }
+            val channel = NotificationChannel(CHANNEL_ID, "VPN Tunnel", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Active VPN tunnel"
+                setShowBadge(false)
+            }
             nm.createNotificationChannel(channel)
         }
         val notification = buildNotification("PaykeyfearVPN", "Tunnel is starting")
@@ -447,17 +447,17 @@ class PaykeyfearVpnService : VpnService() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val title = when (state) {
             TunnelState.Disconnected, TunnelState.Disconnecting -> "PaykeyfearVPN"
-            TunnelState.Connecting -> "Connecting…"
-            is TunnelState.Connected -> "Connected — ${state.protocol.displayName}"
-            is TunnelState.Error -> "VPN error"
+            TunnelState.Connecting -> "Подключение…"
+            is TunnelState.Connected -> "Подключено — ${state.protocol.displayName}"
+            is TunnelState.Error -> "Ошибка VPN"
         }
         val text = when (state) {
-            is TunnelState.Connected -> formatStats(stats)
+            is TunnelState.Connected -> "↓ ${formatBytes(stats.rxBytes)}   ↑ ${formatBytes(stats.txBytes)}"
             is TunnelState.Error -> state.message
-            else -> "Tunnel is ${state.javaClass.simpleName.lowercase()}"
+            else -> "PaykeyfearVPN активен"
         }
-        val showStopAction = state is TunnelState.Connected || state == TunnelState.Connecting
-        nm.notify(NOTIFICATION_ID, buildNotification(title, text, showStopAction))
+        val showStop = state is TunnelState.Connected || state == TunnelState.Connecting
+        nm.notify(NOTIFICATION_ID, buildNotification(title, text, showStop))
     }
 
     private fun buildNotification(title: String, text: String, showStopAction: Boolean = false): Notification {
@@ -470,7 +470,7 @@ class PaykeyfearVpnService : VpnService() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(R.drawable.ic_vpn_notification)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
@@ -481,13 +481,9 @@ class PaykeyfearVpnService : VpnService() {
                 buildStopIntent(this),
                 PendingIntent.FLAG_IMMUTABLE,
             )
-            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", stopPendingIntent)
+            builder.addAction(R.drawable.ic_vpn_notification, "Отключиться", stopPendingIntent)
         }
         return builder.build()
-    }
-
-    private fun formatStats(stats: TunnelStats): String {
-        return "↓ ${formatBytes(stats.rxBytes)}   ↑ ${formatBytes(stats.txBytes)}"
     }
 
     private fun formatBytes(bytes: Long): String {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_name">VPN tunnel</string>
+    <string name="notif_channel_desc">Shows active VPN connection status</string>
+    <string name="notif_title_connecting">Connecting…</string>
+    <string name="notif_title_connected">Connected — %1$s</string>
+    <string name="notif_title_disconnecting">Disconnecting…</string>
+    <string name="notif_title_idle">PaykeyfearVPN</string>
+    <string name="notif_text_starting">Starting tunnel…</string>
+    <string name="notif_text_stats">↓ %1$s   ↑ %2$s</string>
+    <string name="notif_text_error">Error: %1$s</string>
+    <string name="notif_action_disconnect">Disconnect</string>
+</resources>
