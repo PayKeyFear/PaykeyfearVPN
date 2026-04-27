@@ -93,9 +93,9 @@ class SplitTunnelViewModelTest {
         assertThat(state.filtered.map { it.packageName })
             .containsExactly("org.bar.mail")
 
+        // system apps are hidden from filtered regardless of query
         val byPackage = SplitTunnelUiState(apps = sample, query = "baz")
-        assertThat(byPackage.filtered.map { it.packageName })
-            .containsExactly("com.baz.chat")
+        assertThat(byPackage.filtered).isEmpty()
     }
 
     @Test
