@@ -102,7 +102,7 @@ class TunnelControllerTest {
     private fun stubTunnel(): VpnTunnel = object : VpnTunnel {
         override val supportedProtocol: Protocol = Protocol.AWG
 
-        override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector) = Unit
+        override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector, ruBypassEnabled: Boolean) = Unit
 
         override suspend fun stop() = Unit
 
