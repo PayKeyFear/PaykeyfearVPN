@@ -22,7 +22,7 @@ class AwgTunnel(
     // default Bind currently owns its UDP sockets directly (see
     // third_party/awg-mobile/awgmobile.go), so this is a best-effort hook
     // for follow-up when a protected Bind lands.
-    override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector) {
+    override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector, ruBypassEnabled: Boolean) {
         require(config is ConnectionConfig.Awg) { "AwgTunnel requires ConnectionConfig.Awg" }
         check(handle == INVALID_HANDLE) { "AWG tunnel already running" }
         if (!native.available()) {

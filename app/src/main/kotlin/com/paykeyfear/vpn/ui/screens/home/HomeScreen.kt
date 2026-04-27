@@ -120,6 +120,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(
     onSplitTunnelClick: () -> Unit = {},
+    onImportClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     splitTunnelViewModel: SplitTunnelViewModel = hiltViewModel(),
     serversViewModel: ServersViewModel = hiltViewModel(),
@@ -261,11 +262,30 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 } else {
-                    Text(
-                        stringResource(R.string.no_servers),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            stringResource(R.string.no_servers),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted,
+                        )
+                        Button(
+                            onClick = onImportClick,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentGreen,
+                                contentColor = SurfaceBg,
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.import_title),
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
                 }
             }
 

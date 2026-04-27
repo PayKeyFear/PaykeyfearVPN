@@ -201,7 +201,7 @@ class PaykeyfearVpnService : VpnService() {
             val nativeFd = pfd.detachFd()
             val tunFdForGo = ParcelFileDescriptor.fromFd(nativeFd).detachFd()
             ParcelFileDescriptor.adoptFd(nativeFd).close()
-            runCatching { controller.start(config, tunFdForGo, protector()) }.onFailure {
+            runCatching { controller.start(config, tunFdForGo, protector(), ruBypass.enabled) }.onFailure {
                 Timber.e(it, "Tunnel failed")
                 stopSelf()
             }

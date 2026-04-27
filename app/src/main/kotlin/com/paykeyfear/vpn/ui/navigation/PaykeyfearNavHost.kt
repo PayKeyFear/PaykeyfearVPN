@@ -56,7 +56,6 @@ enum class Destination(val route: String, val label: String, val inBottomBar: Bo
 fun PaykeyfearNavHost() {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
-    val currentRoute = backStack?.destination?.route
 
     Scaffold(
         containerColor = com.paykeyfear.vpn.ui.theme.SurfaceBg,
@@ -70,12 +69,9 @@ fun PaykeyfearNavHost() {
                     NavigationBarItem(
                         selected = isSelected,
                         onClick = {
-                            if (currentRoute != dest.route) {
-                                navController.navigate(dest.route) {
-                                    popUpTo(Destination.Home.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                            navController.navigate(dest.route) {
+                                popUpTo(Destination.Home.route) { inclusive = false }
+                                launchSingleTop = true
                             }
                         },
                         icon = {
@@ -116,7 +112,15 @@ fun PaykeyfearNavHost() {
             modifier = Modifier.padding(padding),
         ) {
             composable(Destination.Home.route) {
-                HomeScreen(onSplitTunnelClick = { navController.navigate(Destination.SplitTunnel.route) })
+                HomeScreen(
+                    onSplitTunnelClick = { navController.navigate(Destination.SplitTunnel.route) },
+                    onImportClick = {
+                        navController.navigate(Destination.Import.route) {
+                            popUpTo(Destination.Home.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                )
             }
             composable(Destination.Servers.route) { ServersScreen() }
             composable(Destination.Import.route) { ImportScreen() }

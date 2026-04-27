@@ -18,7 +18,7 @@ class Hysteria2Tunnel(
     @Volatile
     private var running = false
 
-    override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector) {
+    override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector, ruBypassEnabled: Boolean) {
         require(config is ConnectionConfig.Hysteria2) { "Hysteria2Tunnel requires ConnectionConfig.Hysteria2" }
         check(!running) { "Hysteria2 tunnel already running" }
         val yaml = Hysteria2ConfigRenderer.render(config)

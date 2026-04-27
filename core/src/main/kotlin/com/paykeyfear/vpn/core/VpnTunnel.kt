@@ -33,7 +33,7 @@ fun interface Protector {
 interface VpnTunnel {
     val supportedProtocol: com.paykeyfear.vpn.core.model.Protocol
 
-    suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector)
+    suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector, ruBypassEnabled: Boolean = false)
 
     suspend fun stop()
 

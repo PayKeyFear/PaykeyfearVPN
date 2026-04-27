@@ -27,11 +27,11 @@ class VlessTunnel(
 
     @Volatile private var baselineTx: Long = 0L
 
-    override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector) {
+    override suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector, ruBypassEnabled: Boolean) {
         require(config is ConnectionConfig.Vless) { "VlessTunnel requires ConnectionConfig.Vless" }
         check(!running) { "VLESS tunnel already running" }
 
-        val xrayConfig = XrayConfigBuilder.build(config, socksPort).toString()
+        val xrayConfig = XrayConfigBuilder.build(config, socksPort, ruBypassEnabled).toString()
 
         if (!adapter.available()) {
             Timber.tag(TAG).w("vless.aar missing — VLESS running in noop mode")

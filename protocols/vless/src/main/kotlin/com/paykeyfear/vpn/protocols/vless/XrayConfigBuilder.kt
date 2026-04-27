@@ -3,6 +3,7 @@ package com.paykeyfear.vpn.protocols.vless
 import com.paykeyfear.vpn.core.model.ConnectionConfig
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -20,12 +21,47 @@ import kotlinx.serialization.json.put
  * transport is respected via `network` / `serviceName` / `path`.
  */
 object XrayConfigBuilder {
-    fun build(config: ConnectionConfig.Vless, socksPort: Int): JsonObject =
+    fun build(config: ConnectionConfig.Vless, socksPort: Int, ruBypassEnabled: Boolean = false): JsonObject =
         buildJsonObject {
             put("log", buildJsonObject { put("loglevel", "warning") })
             put("inbounds", inbounds(socksPort))
             put("outbounds", outbounds(config))
+            if (ruBypassEnabled) put("routing", routing())
         }
+
+    // Route .ru / .рф (xn--p1ai) domains and major RU services direct,
+    // bypassing the VLESS proxy. Complements IP-level excludeRoute() for
+    // cases where a RU site resolves to non-RU CDN IPs (e.g. Yandex via
+    // Akamai, VK via their global CDN). Xray's sniffing extracts the domain
+    // from HTTP Host / TLS SNI and routes before TCP dial.
+    private fun routing(): JsonObject = buildJsonObject {
+        put("domainStrategy", "IPIfNonMatch")
+        put(
+            "rules",
+            buildJsonArray {
+                add(
+                    buildJsonObject {
+                        put("type", "field")
+                        put(
+                            "domain",
+                            buildJsonArray {
+                                // .ru TLD — matches yandex.ru, mail.ru, vk.ru, etc.
+                                add(JsonPrimitive("domain:ru"))
+                                // .рф TLD (Punycode)
+                                add(JsonPrimitive("domain:xn--p1ai"))
+                                // Major RU services on non-.ru domains
+                                add(JsonPrimitive("domain:vk.com"))
+                                add(JsonPrimitive("domain:yandex.net"))
+                                add(JsonPrimitive("domain:yastatic.net"))
+                                add(JsonPrimitive("domain:yandex-team.ru"))
+                            },
+                        )
+                        put("outboundTag", "direct")
+                    },
+                )
+            },
+        )
+    }
 
     private fun inbounds(socksPort: Int): JsonArray =
         buildJsonArray {

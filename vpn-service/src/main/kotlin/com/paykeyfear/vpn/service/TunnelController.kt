@@ -55,7 +55,12 @@ class TunnelController(
         }
     }
 
-    suspend fun start(config: ConnectionConfig, tunFd: Int, protector: Protector = Protector.NOOP) {
+    suspend fun start(
+        config: ConnectionConfig,
+        tunFd: Int,
+        protector: Protector = Protector.NOOP,
+        ruBypassEnabled: Boolean = false,
+    ) {
         mutex.withLock {
             // If a previous start succeeded partially or the caller forgot
             // to stop first (e.g. a network-change reconnect racing with
@@ -72,7 +77,7 @@ class TunnelController(
                 ?: error("No tunnel implementation for protocol ${config.protocol}")
             _state.value = TunnelState.Connecting
             try {
-                tunnel.start(config, tunFd, protector)
+                tunnel.start(config, tunFd, protector, ruBypassEnabled)
                 active = tunnel
                 _state.value =
                     TunnelState.Connected(
