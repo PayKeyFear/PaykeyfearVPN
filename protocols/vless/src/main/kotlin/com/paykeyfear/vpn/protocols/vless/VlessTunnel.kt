@@ -59,8 +59,24 @@ class VlessTunnel(
         running = false
         baselineRx = 0L
         baselineTx = 0L
-        if (tun2socks.available()) runCatching { tun2socks.stop() }
-        if (adapter.available()) runCatching { adapter.stopXray() }
+        // tun2socks.stop() and adapter.stopXray() are blocking JNI calls that
+        // may hang if the Go runtime is stuck (e.g. tun2socks engine shutdown
+        // waiting on a QUIC context). Run each on a daemon thread and join with
+        // a hard timeout so a misbehaving Go stop doesn't block the Kotlin side
+        // indefinitely and cause repeated ACTION_STOP calls from the service.
+        stopWithTimeout("tun2socks") { if (tun2socks.available()) tun2socks.stop() }
+        stopWithTimeout("xray") { if (adapter.available()) adapter.stopXray() }
+    }
+
+    private fun stopWithTimeout(name: String, block: () -> Unit) {
+        val t = Thread(block, "vless-stop-$name").also {
+            it.isDaemon = true
+            it.start()
+        }
+        t.join(STOP_TIMEOUT_MS)
+        if (t.isAlive) {
+            Timber.tag(TAG).w("$name stop timed out after ${STOP_TIMEOUT_MS}ms — continuing")
+        }
     }
 
     override fun stats(): Flow<TunnelStats> = flow {
@@ -98,5 +114,6 @@ class VlessTunnel(
         const val DEFAULT_SOCKS_PORT: Int = 10808
         const val BRIDGE_HOST: String = "127.0.0.1"
         private const val TAG = "VlessTunnel"
+        private const val STOP_TIMEOUT_MS = 3_000L
     }
 }

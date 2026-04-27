@@ -123,6 +123,10 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
     }
 
     var selectedMethod by rememberSaveable { mutableStateOf<Int?>(null) }
+    // Reset card highlight when import completes or text is cleared.
+    androidx.compose.runtime.LaunchedEffect(state.importedName, state.text) {
+        if (state.importedName != null || state.text.isBlank()) selectedMethod = null
+    }
 
     Column(
         modifier = Modifier
@@ -137,16 +141,16 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Title
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Импорт конфигурации", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
-                Text("VLESS · AmneziaWG", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                Text(stringResource(R.string.import_title), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.import_subtitle), style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
 
             // Method cards
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ImportMethodCard(
                     icon = Icons.Filled.ContentPaste,
-                    title = "Буфер обмена",
-                    hint = "Вставить из clipboard",
+                    title = stringResource(R.string.import_paste_clipboard),
+                    hint = stringResource(R.string.import_clipboard_hint),
                     isSelected = selectedMethod == 0,
                     onClick = {
                         selectedMethod = 0
@@ -155,8 +159,8 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
                 )
                 ImportMethodCard(
                     icon = Icons.Filled.FolderOpen,
-                    title = "Файл",
-                    hint = ".conf, .json",
+                    title = stringResource(R.string.import_open_file),
+                    hint = stringResource(R.string.import_file_hint),
                     isSelected = selectedMethod == 1,
                     onClick = {
                         selectedMethod = 1
@@ -165,8 +169,8 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
                 )
                 ImportMethodCard(
                     icon = Icons.Filled.QrCodeScanner,
-                    title = "QR-код",
-                    hint = "Сканировать камерой",
+                    title = stringResource(R.string.import_scan_qr),
+                    hint = stringResource(R.string.import_qr_hint),
                     isSelected = selectedMethod == 2,
                     onClick = {
                         selectedMethod = 2
@@ -185,7 +189,7 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
             // OR divider
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f).height(1.dp).background(BorderColor))
-                Text("ИЛИ ВСТАВЬТЕ ТЕКСТ", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                Text(stringResource(R.string.import_or_divider), style = MaterialTheme.typography.labelSmall, color = TextMuted)
                 Box(Modifier.weight(1f).height(1.dp).background(BorderColor))
             }
 
@@ -236,7 +240,7 @@ fun ImportScreen(viewModel: ImportViewModel = hiltViewModel()) {
                     disabledContentColor = TextMuted,
                 ),
             ) {
-                Text("Импортировать", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text(stringResource(R.string.import_button), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
         }
     }

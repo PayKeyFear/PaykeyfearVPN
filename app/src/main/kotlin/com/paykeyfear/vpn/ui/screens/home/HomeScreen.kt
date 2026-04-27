@@ -12,6 +12,7 @@ import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -205,10 +206,24 @@ fun HomeScreen(
 
             Spacer(Modifier.height(40.dp))
 
+            // Optimistic connecting: show CONNECTING animation immediately on
+            // tap so the button responds before the VPN permission dialog
+            // resolves and TunnelState actually changes.
+            var localConnecting by remember { mutableStateOf(false) }
+            LaunchedEffect(state.tunnelState) {
+                if (state.tunnelState != TunnelState.Disconnected) localConnecting = false
+            }
+            val effectiveState = if (
+                localConnecting && state.tunnelState == TunnelState.Disconnected
+            ) TunnelState.Connecting else state.tunnelState
+
             ConnectCircle(
-                state = state.tunnelState,
+                state = effectiveState,
                 enabled = state.selected != null || state.isConnected,
-                onClick = viewModel::toggle,
+                onClick = {
+                    if (state.tunnelState == TunnelState.Disconnected) localConnecting = true
+                    viewModel.toggle()
+                },
             )
 
             Spacer(Modifier.height(12.dp))
@@ -360,6 +375,40 @@ private fun ConnectCircle(
     }
     val animatedRingColor by animateColorAsState(ringColor, tween(600), label = "ring_color")
 
+    // Animate each gradient stop separately so the button colour transitions
+    // smoothly instead of cutting instantly when state changes.
+    val btnCenterColor by animateColorAsState(
+        when {
+            isConnected  -> Color(0xFF1A4D38)
+            isConnecting -> AmberColor.copy(alpha = 0.7f)
+            else         -> SurfaceCard2
+        },
+        tween(600),
+        label = "btn_center",
+    )
+    val btnEdgeColor by animateColorAsState(
+        when {
+            isConnected  -> Color(0xFF0D2B20)
+            isConnecting -> AmberColor.copy(alpha = 0.3f)
+            else         -> SurfaceBg
+        },
+        tween(600),
+        label = "btn_edge",
+    )
+
+    // Fade the spinning arc in/out so it doesn't pop.
+    val arcAlpha by animateFloatAsState(
+        if (isConnecting) 1f else 0f,
+        tween(400),
+        label = "arc_alpha",
+    )
+    // Fade the pulse rings in when transitioning to connected.
+    val pulseVisible by animateFloatAsState(
+        if (isConnected) 1f else 0f,
+        tween(500),
+        label = "pulse_visible",
+    )
+
     val infiniteTransition = rememberInfiniteTransition(label = "connect_anim")
 
     val arcRotation by infiniteTransition.animateFloat(
@@ -420,19 +469,20 @@ private fun ConnectCircle(
         contentAlignment = Alignment.Center,
     ) {
         // Pulse rings — no pointer modifiers, touch-transparent by default.
-        if (isConnected) {
+        // Use pulseVisible to fade them in/out smoothly.
+        if (pulseVisible > 0f) {
             Canvas(modifier = Modifier.size(240.dp)) {
                 val strokeWidth = 2.dp.toPx()
                 val center = Offset(size.width / 2f, size.height / 2f)
                 val baseRadius = size.minDimension / 2f - strokeWidth / 2f
                 drawCircle(
-                    color = AccentGreen.copy(alpha = pulse1Alpha),
+                    color = AccentGreen.copy(alpha = pulse1Alpha * pulseVisible),
                     radius = baseRadius * pulse1Scale,
                     center = center,
                     style = Stroke(width = strokeWidth),
                 )
                 drawCircle(
-                    color = AccentGreen.copy(alpha = pulse2Alpha),
+                    color = AccentGreen.copy(alpha = pulse2Alpha * pulseVisible),
                     radius = baseRadius * pulse2Scale,
                     center = center,
                     style = Stroke(width = strokeWidth),
@@ -457,7 +507,7 @@ private fun ConnectCircle(
                         style = Stroke(width = strokeWidth),
                     )
                     drawArc(
-                        color = animatedRingColor,
+                        color = animatedRingColor.copy(alpha = arcAlpha),
                         startAngle = arcRotation,
                         sweepAngle = 120f,
                         useCenter = false,
@@ -497,27 +547,8 @@ private fun ConnectCircle(
             }
         }
 
-        // Button circle.
-        val btnBrush = when {
-            isConnected -> Brush.radialGradient(
-                listOf(
-                    Color(0xFF1A4D38),
-                    Color(0xFF0D2B20),
-                ),
-            )
-            isConnecting -> Brush.radialGradient(
-                listOf(
-                    AmberColor.copy(alpha = 0.7f),
-                    AmberColor.copy(alpha = 0.3f),
-                ),
-            )
-            else -> Brush.radialGradient(
-                listOf(
-                    SurfaceCard2,
-                    SurfaceBg,
-                ),
-            )
-        }
+        // Button circle — gradient animates smoothly via per-stop color animation.
+        val btnBrush = Brush.radialGradient(listOf(btnCenterColor, btnEdgeColor))
         Box(
             modifier = Modifier
                 .size(240.dp)

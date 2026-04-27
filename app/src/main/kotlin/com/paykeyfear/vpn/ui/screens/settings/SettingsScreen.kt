@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -151,10 +152,19 @@ private val LANG_OPTIONS = listOf(
 @Composable
 private fun SettingsLanguageItem() {
     var expanded by remember { mutableStateOf(false) }
-    val currentTag = AppCompatDelegate.getApplicationLocales().toLanguageTags()
-        .takeIf { it.isNotBlank() }
-        ?.substringBefore(',')
-        ?.substringBefore('-')
+    val context = LocalContext.current
+    val currentTag = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        context.getSystemService(android.app.LocaleManager::class.java)
+            ?.applicationLocales?.toLanguageTags()
+            ?.takeIf { it.isNotBlank() }
+            ?.substringBefore(',')
+            ?.substringBefore('-')
+    } else {
+        AppCompatDelegate.getApplicationLocales().toLanguageTags()
+            .takeIf { it.isNotBlank() }
+            ?.substringBefore(',')
+            ?.substringBefore('-')
+    }
     val current = LANG_OPTIONS.find { it.tag == currentTag } ?: LANG_OPTIONS[0]
 
     ListItem(
@@ -173,12 +183,30 @@ private fun SettingsLanguageItem() {
                         text = { Text(stringResource(opt.labelRes)) },
                         onClick = {
                             expanded = false
-                            val locales = if (opt.tag == null) {
-                                LocaleListCompat.getEmptyLocaleList()
+                            // API 33+: LocaleManager is the authoritative way to
+                            // set per-app locale with ComponentActivity. The system
+                            // persists the choice and sends a config change that
+                            // causes recreation automatically — no recreate() needed.
+                            // AppCompatDelegate.setApplicationLocales() also calls
+                            // this under the hood on API 33+, but the AppCompat
+                            // recreation trigger requires AppCompatActivity; since
+                            // we use ComponentActivity we call the system API directly.
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                val lm = context.getSystemService(android.app.LocaleManager::class.java)
+                                lm.applicationLocales = if (opt.tag == null) {
+                                    android.os.LocaleList.getEmptyLocaleList()
+                                } else {
+                                    android.os.LocaleList.forLanguageTags(opt.tag)
+                                }
                             } else {
-                                LocaleListCompat.forLanguageTags(opt.tag)
+                                val locales = if (opt.tag == null) {
+                                    LocaleListCompat.getEmptyLocaleList()
+                                } else {
+                                    LocaleListCompat.forLanguageTags(opt.tag)
+                                }
+                                AppCompatDelegate.setApplicationLocales(locales)
+                                (context as? android.app.Activity)?.recreate()
                             }
-                            AppCompatDelegate.setApplicationLocales(locales)
                         },
                     )
                 }

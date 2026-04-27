@@ -30,6 +30,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -337,6 +338,15 @@ class PaykeyfearVpnService : VpnService() {
         scope.launch {
             runCatching { prior?.cancelAndJoin() }
             runCatching { controller.stop() }
+            // Android 16 (API 36) fdsan is strict: tun2socks closes the tun
+            // fd on Stop(); the kernel recycles that fd number immediately.
+            // If Compose's RenderThread is mid-frame (e.g. disconnect
+            // animation), it may acquire a graphics buffer that lands on the
+            // same fd number, then SurfaceFlinger tries to transfer it via
+            // Binder — fdsan sees ownership conflict → SIGABRT. A short
+            // yield gives the RenderThread time to flush any in-flight
+            // SurfaceFlinger transaction before the fd slot is recycled.
+            delay(150)
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }

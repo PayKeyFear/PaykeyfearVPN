@@ -11,6 +11,11 @@
     <string name="status_connecting">Подключение…</string>
     <string name="status_connected">Подключено</string>
     <string name="status_error">Ошибка</string>
+    <string name="import_subtitle">VLESS · AmneziaWG</string>
+    <string name="import_or_divider">ИЛИ ВСТАВЬТЕ ТЕКСТ</string>
+    <string name="import_clipboard_hint">Вставить из clipboard</string>
+    <string name="import_file_hint">.conf, .json</string>
+    <string name="import_qr_hint">Сканировать камерой</string>
     <string name="import_paste_hint">Вставьте ссылку vless://, hysteria2://, vpn:// или полную конфигурацию</string>
     <string name="import_button">Импортировать</string>
     <string name="import_paste_clipboard">Вставить из буфера обмена</string>
@@ -41,6 +46,7 @@
     <string name="split_desc_deny">Выбранные приложения идут в обход туннеля.</string>
     <string name="split_search_hint">Поиск приложений…</string>
     <string name="split_no_apps">Ничего не найдено.</string>
+    <string name="split_locked_while_connected">Отключите VPN для изменения правил туннелирования</string>
     <string name="split_ru_bypass_title">Российские сайты мимо VPN</string>
     <string name="split_ru_bypass_desc">Российские IP-адреса и домены подключаются напрямую, минуя туннель. Данные обновляются каждые 12 часов.</string>
     <string name="privacy_title">Политика конфиденциальности</string>

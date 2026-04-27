@@ -5,7 +5,9 @@ import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
+import com.paykeyfear.vpn.core.model.TunnelState
 import com.paykeyfear.vpn.data.prefs.PreferencesRepository
+import com.paykeyfear.vpn.service.TunnelController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ data class SplitTunnelUiState(
     val isLoading: Boolean = true,
     val query: String = "",
     val ruBypass: Boolean = false,
+    val vpnActive: Boolean = false,
 ) {
     val filtered: List<InstalledApp> =
         if (query.isBlank()) {
@@ -48,6 +51,7 @@ class SplitTunnelViewModel
 constructor(
     @ApplicationContext private val context: Context,
     private val preferences: PreferencesRepository,
+    private val tunnelController: TunnelController,
 ) : ViewModel() {
     private val apps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val loading = MutableStateFlow(true)
@@ -59,15 +63,23 @@ constructor(
             preferences.splitTunnelPackages,
             preferences.ruBypassEnabled,
             apps,
-            combine(loading, query) { l, q -> l to q },
-        ) { mode, pkgs, ruBypass, list, (isLoading, q) ->
+            combine(loading, query, tunnelController.state) { l, q, ts -> Triple(l, q, ts) },
+        ) { mode, pkgs, ruBypass, list, (isLoading, q, tunnelState) ->
+            val sorted = list.sortedWith(
+                compareBy(
+                    { it.packageName !in pkgs }, // selected first (false < true)
+                    { it.isSystem },
+                    { it.label.lowercase() },
+                ),
+            )
             SplitTunnelUiState(
                 mode = mode,
                 selected = pkgs,
-                apps = list,
+                apps = sorted,
                 isLoading = isLoading,
                 query = q,
                 ruBypass = ruBypass,
+                vpnActive = tunnelState is TunnelState.Connected || tunnelState == TunnelState.Connecting,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -83,10 +95,20 @@ constructor(
     }
 
     fun setMode(mode: SplitTunnelMode) {
+        if (state.value.vpnActive) return
         viewModelScope.launch { preferences.setSplitTunnelMode(mode) }
     }
 
+    fun resetRules() {
+        if (state.value.vpnActive) return
+        viewModelScope.launch {
+            preferences.setSplitTunnelPackages(emptySet())
+            preferences.setSplitTunnelMode(SplitTunnelMode.Off)
+        }
+    }
+
     fun toggle(pkg: String, checked: Boolean) {
+        if (state.value.vpnActive) return
         viewModelScope.launch {
             // Don't read state.value — it's produced by a WhileSubscribed
             // StateFlow that stays at initialValue until someone actually
@@ -107,6 +129,7 @@ constructor(
     }
 
     fun setRuBypass(enabled: Boolean) {
+        if (state.value.vpnActive) return
         viewModelScope.launch { preferences.setRuBypassEnabled(enabled) }
     }
 

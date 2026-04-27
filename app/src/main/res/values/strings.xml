@@ -11,6 +11,11 @@
     <string name="status_connecting">Connecting…</string>
     <string name="status_connected">Connected</string>
     <string name="status_error">Error</string>
+    <string name="import_subtitle">VLESS · AmneziaWG</string>
+    <string name="import_or_divider">OR PASTE TEXT</string>
+    <string name="import_clipboard_hint">Paste from clipboard</string>
+    <string name="import_file_hint">.conf, .json</string>
+    <string name="import_qr_hint">Scan with camera</string>
     <string name="import_paste_hint">Paste a vless://, hysteria2://, vpn:// URL, or a full config</string>
     <string name="import_button">Import</string>
     <string name="import_paste_clipboard">Paste from clipboard</string>
@@ -41,6 +46,7 @@
     <string name="split_desc_deny">The selected apps bypass the tunnel.</string>
     <string name="split_search_hint">Search apps…</string>
     <string name="split_no_apps">No apps match the search.</string>
+    <string name="split_locked_while_connected">Disconnect VPN to change split-tunnel rules</string>
     <string name="split_ru_bypass_title">RU sites bypass VPN</string>
     <string name="split_ru_bypass_desc">Russian IPs and domains always connect directly, not through the tunnel. Data refreshes every 12 hours.</string>
     <string name="privacy_title">Privacy policy</string>
