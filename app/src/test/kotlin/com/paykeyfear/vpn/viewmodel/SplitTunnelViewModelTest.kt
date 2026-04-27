@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.paykeyfear.vpn.core.model.SplitTunnelMode
+import com.paykeyfear.vpn.service.TunnelController
 import com.paykeyfear.vpn.testing.FakePreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +26,7 @@ class SplitTunnelViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val context =
         ApplicationProvider.getApplicationContext<android.content.Context>()
+    private val tunnelController = TunnelController(emptyMap())
 
     @Before
     fun setUp() {
@@ -42,7 +44,7 @@ class SplitTunnelViewModelTest {
             splitMode = SplitTunnelMode.Allowlist,
             splitPackages = setOf("com.example.a", "com.example.b"),
         )
-        val vm = SplitTunnelViewModel(context, prefs)
+        val vm = SplitTunnelViewModel(context, prefs, tunnelController)
         vm.state.test {
             var s = awaitItem()
             while (s.mode == SplitTunnelMode.Off || s.selected.isEmpty()) s = awaitItem()
@@ -55,7 +57,7 @@ class SplitTunnelViewModelTest {
     @Test
     fun `setMode writes through to preferences`() = runTest(dispatcher) {
         val prefs = FakePreferencesRepository()
-        val vm = SplitTunnelViewModel(context, prefs)
+        val vm = SplitTunnelViewModel(context, prefs, tunnelController)
         vm.setMode(SplitTunnelMode.Denylist)
         dispatcher.scheduler.advanceUntilIdle()
         assertThat(prefs.currentSplitMode()).isEqualTo(SplitTunnelMode.Denylist)
@@ -64,7 +66,7 @@ class SplitTunnelViewModelTest {
     @Test
     fun `toggle adds and removes packages`() = runTest(dispatcher) {
         val prefs = FakePreferencesRepository(splitPackages = setOf("com.existing"))
-        val vm = SplitTunnelViewModel(context, prefs)
+        val vm = SplitTunnelViewModel(context, prefs, tunnelController)
         dispatcher.scheduler.advanceUntilIdle()
 
         vm.toggle("com.added", checked = true)
@@ -79,7 +81,7 @@ class SplitTunnelViewModelTest {
     @Test
     fun `query filters apps by label and package substring`() = runTest(dispatcher) {
         val prefs = FakePreferencesRepository()
-        val vm = SplitTunnelViewModel(context, prefs)
+        val vm = SplitTunnelViewModel(context, prefs, tunnelController)
         dispatcher.scheduler.advanceUntilIdle()
 
         val sample = listOf(
@@ -99,7 +101,7 @@ class SplitTunnelViewModelTest {
     @Test
     fun `setQuery updates state`() = runTest(dispatcher) {
         val prefs = FakePreferencesRepository()
-        val vm = SplitTunnelViewModel(context, prefs)
+        val vm = SplitTunnelViewModel(context, prefs, tunnelController)
         vm.setQuery("browser")
         vm.state.test {
             var s = awaitItem()
