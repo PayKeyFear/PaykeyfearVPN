@@ -61,6 +61,11 @@
     <string name="split_locked_while_connected">Disconnect VPN to change split-tunnel rules</string>
     <string name="split_ru_bypass_title">RU sites bypass VPN</string>
     <string name="split_ru_bypass_desc">Russian IPs and domains always connect directly, not through the tunnel. Data refreshes every 12 hours.</string>
+    <string name="split_ru_apps_bypass_title">Все российские приложения мимо VPN</string>
+    <string name="split_ru_apps_bypass_desc">Отметить все установленные российские приложения в deny-список, чтобы они работали напрямую.</string>
+    <string name="split_ru_apps_bypass_btn">Применить</string>
+    <string name="split_section_russian">Российские приложения</string>
+    <string name="split_section_other">Остальные</string>
     <string name="privacy_title">Privacy policy</string>
     <string name="privacy_subtitle">What PaykeyfearVPN does with your data</string>
     <string name="privacy_last_updated">Last updated: 2026-04-19</string>

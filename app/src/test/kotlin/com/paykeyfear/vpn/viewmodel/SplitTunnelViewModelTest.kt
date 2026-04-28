@@ -85,17 +85,29 @@ class SplitTunnelViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         val sample = listOf(
-            InstalledApp("com.foo.browser", "Foo Browser", isSystem = false),
-            InstalledApp("org.bar.mail", "Bar Mail", isSystem = false),
-            InstalledApp("com.baz.chat", "Baz Chat", isSystem = true),
+            InstalledApp("com.foo.browser", "Foo Browser", isSystem = false, isRussian = false),
+            InstalledApp("org.bar.mail", "Bar Mail", isSystem = false, isRussian = false),
+            InstalledApp("com.baz.chat", "Baz Chat", isSystem = true, isRussian = false),
         )
         val state = SplitTunnelUiState(apps = sample, query = "mail")
         assertThat(state.filtered.map { it.packageName })
             .containsExactly("org.bar.mail")
 
+        // system apps are hidden from filtered regardless of query
         val byPackage = SplitTunnelUiState(apps = sample, query = "baz")
-        assertThat(byPackage.filtered.map { it.packageName })
-            .containsExactly("com.baz.chat")
+        assertThat(byPackage.filtered).isEmpty()
+    }
+
+    @Test
+    fun `filteredRu and filteredOther split apps by isRussian`() {
+        val sample = listOf(
+            InstalledApp("com.vkontakte.android", "VK", isSystem = false, isRussian = true),
+            InstalledApp("com.foo.browser", "Foo", isSystem = false, isRussian = false),
+            InstalledApp("com.bar.sys", "Bar", isSystem = true, isRussian = false),
+        )
+        val state = SplitTunnelUiState(apps = sample)
+        assertThat(state.filteredRu.map { it.packageName }).containsExactly("com.vkontakte.android")
+        assertThat(state.filteredOther.map { it.packageName }).containsExactly("com.foo.browser")
     }
 
     @Test

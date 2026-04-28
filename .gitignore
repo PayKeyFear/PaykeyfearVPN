@@ -54,6 +54,8 @@ Thumbs.db
 /keystore.properties
 *.jks
 *.keystore
+*.jks.bak
+*.keystore.bak
 
 # Upstream Go clones produced by scripts/build-native.sh
 /vendor/
