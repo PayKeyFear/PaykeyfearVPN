@@ -61,6 +61,11 @@
     <string name="split_locked_while_connected">Отключите VPN для изменения правил туннелирования</string>
     <string name="split_ru_bypass_title">Российские сайты мимо VPN</string>
     <string name="split_ru_bypass_desc">Российские IP-адреса и домены подключаются напрямую, минуя туннель. Данные обновляются каждые 12 часов.</string>
+    <string name="split_ru_apps_bypass_title">Все российские приложения мимо VPN</string>
+    <string name="split_ru_apps_bypass_desc">Отметить все установленные российские приложения в deny-список, чтобы они работали напрямую.</string>
+    <string name="split_ru_apps_bypass_btn">Применить</string>
+    <string name="split_section_russian">Российские приложения</string>
+    <string name="split_section_other">Остальные</string>
     <string name="privacy_title">Политика конфиденциальности</string>
     <string name="privacy_subtitle">Что PaykeyfearVPN делает с вашими данными</string>
     <string name="privacy_last_updated">Обновлено: 19.04.2026</string>
