@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.item
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -224,7 +223,10 @@ fun SplitTunnelScreen(
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
                     if (state.filteredRu.isNotEmpty()) {
-                        item(key = "header_ru") {
+                        items(
+                            listOf(Unit),
+                            key = { "header_ru" },
+                        ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier.fillMaxWidth(),
@@ -244,7 +246,10 @@ fun SplitTunnelScreen(
                         }
                     }
                     if (state.filteredOther.isNotEmpty()) {
-                        item(key = "header_other") {
+                        items(
+                            listOf(Unit),
+                            key = { "header_other" },
+                        ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier.fillMaxWidth(),
