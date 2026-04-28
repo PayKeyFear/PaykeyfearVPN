@@ -1,6 +1,5 @@
 package com.paykeyfear.vpn.ui.screens.settings
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,8 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.item
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.stickyHeader
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -79,7 +78,7 @@ private fun AppRow(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SplitTunnelScreen(
     onBack: () -> Unit = {},
@@ -225,8 +224,11 @@ fun SplitTunnelScreen(
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
                     if (state.filteredRu.isNotEmpty()) {
-                        stickyHeader {
-                            Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                        item(key = "header_ru") {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
                                 Text(
                                     stringResource(R.string.split_section_russian),
                                     style = MaterialTheme.typography.labelMedium,
@@ -242,8 +244,11 @@ fun SplitTunnelScreen(
                         }
                     }
                     if (state.filteredOther.isNotEmpty()) {
-                        stickyHeader {
-                            Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                        item(key = "header_other") {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
                                 Text(
                                     stringResource(R.string.split_section_other),
                                     style = MaterialTheme.typography.labelMedium,
