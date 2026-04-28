@@ -241,8 +241,41 @@ val RU_PACKAGES: Set<String> = setOf(
     "com.drweb",
     "ru.drweb.security",
     "com.drweb.lite",
+    // Food delivery / restaurants
+    "ru.kfc.kfc_delivery",
+    "com.apegroup.mcdonaldsrussia",
+    "ru.burgerking",
+    "ru.vkusvill",
+    // Streaming / media (additional)
+    "ru.rutube.app",
+    "ru.more.play",
+    // E-commerce (additional)
+    "ru.dns.shop.android",
+    // Government / identity (additional)
+    "ru.gosuslugi.goskey",
+    "com.gnivts.selfemployed",
+    // Telecom / ISP
+    "ru.rostel",
+    "ru.ufanet.smartphone",
+    // VK services
+    "ru.vk.store",
+    // Yandex (additional)
+    "ru.yandex.cloud",
+    "ru.yandex.taxi",
+    "ru.yandex.key",
+    "ru.yandex.rasp",
+    "ru.yandex.disk",
+    "com.yandex.yamb",
+    "com.yandex.iot",
+    // Kinopoisk
+    "ru.kinopoisk",
+    // Jobs (additional)
+    "ru.hh.android",
+    // Banking (additional)
+    "ru.lewis.dbo",
+    // Home / smart devices
+    "home.tuvio.com",
     // Food delivery
-    "ru.foodfox.app",
     "com.edadeal.android",
 )
 
