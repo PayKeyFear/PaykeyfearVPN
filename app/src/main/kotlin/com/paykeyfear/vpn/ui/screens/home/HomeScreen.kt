@@ -196,131 +196,131 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-            Text(
-                stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                color = TextPrimary,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(6.dp))
-            AnimatedContent(
-                targetState = state.statusLabel,
-                transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
-                label = "status_label",
-            ) { label ->
-                Text(label, style = MaterialTheme.typography.bodyLarge, color = TextMuted)
-            }
-
-            Spacer(Modifier.height(40.dp))
-
-            // Optimistic connecting: show CONNECTING animation immediately on
-            // tap so the button responds before the VPN permission dialog
-            // resolves and TunnelState actually changes.
-            var localConnecting by remember { mutableStateOf(false) }
-            LaunchedEffect(state.tunnelState) {
-                if (state.tunnelState != TunnelState.Disconnected) localConnecting = false
-            }
-            val effectiveState = if (
-                localConnecting && state.tunnelState == TunnelState.Disconnected
-            ) {
-                TunnelState.Connecting
-            } else {
-                state.tunnelState
-            }
-
-            ConnectCircle(
-                state = effectiveState,
-                enabled = state.selected != null || state.isConnected,
-                onClick = {
-                    if (state.tunnelState == TunnelState.Disconnected) localConnecting = true
-                    viewModel.toggle()
-                },
-                modifier = Modifier.graphicsLayer(scaleX = circleScale, scaleY = circleScale),
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            // Session timer
-            AnimatedVisibility(
-                visible = state.isConnected,
-                enter = fadeIn(tween(300)) + expandVertically(),
-                exit = fadeOut(tween(300)) + shrinkVertically(),
-            ) {
-                val connectedState = state.tunnelState as? TunnelState.Connected
-                if (connectedState != null) {
-                    SessionTimer(connectedAtMs = connectedState.connectedAtEpochMs)
-                }
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            // Server card
-            state.selected?.let { server ->
-                ServerInfoCard(
-                    server = server,
-                    onClick = { if (state.hasAnyServer) showServerPicker = true },
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
                 )
-            } ?: run {
-                if (state.hasAnyServer) {
+                Spacer(Modifier.height(6.dp))
+                AnimatedContent(
+                    targetState = state.statusLabel,
+                    transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
+                    label = "status_label",
+                ) { label ->
+                    Text(label, style = MaterialTheme.typography.bodyLarge, color = TextMuted)
+                }
+
+                Spacer(Modifier.height(40.dp))
+
+                // Optimistic connecting: show CONNECTING animation immediately on
+                // tap so the button responds before the VPN permission dialog
+                // resolves and TunnelState actually changes.
+                var localConnecting by remember { mutableStateOf(false) }
+                LaunchedEffect(state.tunnelState) {
+                    if (state.tunnelState != TunnelState.Disconnected) localConnecting = false
+                }
+                val effectiveState = if (
+                    localConnecting && state.tunnelState == TunnelState.Disconnected
+                ) {
+                    TunnelState.Connecting
+                } else {
+                    state.tunnelState
+                }
+
+                ConnectCircle(
+                    state = effectiveState,
+                    enabled = state.selected != null || state.isConnected,
+                    onClick = {
+                        if (state.tunnelState == TunnelState.Disconnected) localConnecting = true
+                        viewModel.toggle()
+                    },
+                    modifier = Modifier.graphicsLayer(scaleX = circleScale, scaleY = circleScale),
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                // Session timer
+                AnimatedVisibility(
+                    visible = state.isConnected,
+                    enter = fadeIn(tween(300)) + expandVertically(),
+                    exit = fadeOut(tween(300)) + shrinkVertically(),
+                ) {
+                    val connectedState = state.tunnelState as? TunnelState.Connected
+                    if (connectedState != null) {
+                        SessionTimer(connectedAtMs = connectedState.connectedAtEpochMs)
+                    }
+                }
+
+                Spacer(Modifier.height(28.dp))
+
+                // Server card
+                state.selected?.let { server ->
                     ServerInfoCard(
-                        server = null,
-                        onClick = { showServerPicker = true },
+                        server = server,
+                        onClick = { if (state.hasAnyServer) showServerPicker = true },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            stringResource(R.string.no_servers),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextMuted,
+                } ?: run {
+                    if (state.hasAnyServer) {
+                        ServerInfoCard(
+                            server = null,
+                            onClick = { showServerPicker = true },
+                            modifier = Modifier.fillMaxWidth(),
                         )
-                        Button(
-                            onClick = onImportClick,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentGreen,
-                                contentColor = SurfaceBg,
-                            ),
-                            shape = RoundedCornerShape(12.dp),
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                stringResource(R.string.import_title),
-                                fontWeight = FontWeight.SemiBold,
+                                stringResource(R.string.no_servers),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted,
                             )
+                            Button(
+                                onClick = onImportClick,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AccentGreen,
+                                    contentColor = SurfaceBg,
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text(
+                                    stringResource(R.string.import_title),
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Stats
-            AnimatedVisibility(
-                visible = state.isConnected,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
-            ) {
-                Column {
-                    Spacer(Modifier.height(12.dp))
-                    StatisticsCard(
-                        downloadBytes = state.stats.rxBytes,
-                        uploadBytes = state.stats.txBytes,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                // Stats
+                AnimatedVisibility(
+                    visible = state.isConnected,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    Column {
+                        Spacer(Modifier.height(12.dp))
+                        StatisticsCard(
+                            downloadBytes = state.stats.rxBytes,
+                            uploadBytes = state.stats.txBytes,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
 
-            SplitTunnelCard(
-                mode = splitState.mode,
-                selectedCount = splitState.selected.size,
-                onClick = onSplitTunnelClick,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } // Column
+                SplitTunnelCard(
+                    mode = splitState.mode,
+                    selectedCount = splitState.selected.size,
+                    onClick = onSplitTunnelClick,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } // Column
         } // BoxWithConstraints
 
         if (showServerPicker) {
