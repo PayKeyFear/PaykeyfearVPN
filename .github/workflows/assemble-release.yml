@@ -178,10 +178,14 @@ jobs:
           fi
           echo "✓ APK contains native backend"
 
+      - name: Sanitize ref name
+        id: ref
+        run: echo "name=$(echo '${{ github.ref_name }}' | tr '/' '-')" >> $GITHUB_OUTPUT
+
       - name: Upload bundle + APK
         uses: actions/upload-artifact@v4
         with:
-          name: paykeyfear-${{ github.ref_name }}-native
+          name: paykeyfear-${{ steps.ref.outputs.name }}-native
           path: |
             app/build/outputs/bundle/release/*.aab
             app/build/outputs/apk/release/*.apk
@@ -189,7 +193,7 @@ jobs:
       - name: Upload umbrella .aar (for audit)
         uses: actions/upload-artifact@v4
         with:
-          name: native-backend-${{ github.ref_name }}
+          name: native-backend-${{ steps.ref.outputs.name }}
           path: protocols/awg/libs/paykeyfearnative.aar
 
       - name: Attach to GitHub Release
