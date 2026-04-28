@@ -25,6 +25,64 @@ data class InstalledApp(
     val packageName: String,
     val label: String,
     val isSystem: Boolean,
+    val isRussian: Boolean = false,
+)
+
+val RU_PACKAGES: Set<String> = setOf(
+    // VK / Mail.ru group
+    "com.vkontakte.android",
+    "com.vk.vkcompose",
+    "ru.mail.mailapp",
+    "ru.mail.auth.app",
+    "com.mailru.icq",
+    "ru.ok.android",
+    "com.odnoklassniki.android",
+    // Yandex
+    "com.yandex.browser",
+    "com.yandex.launcher",
+    "com.yandex.mail",
+    "com.yandex.maps",
+    "com.yandex.market",
+    "com.yandex.taxi",
+    "com.yandex.music",
+    "com.yandex.disk",
+    "com.yandex.translate",
+    "ru.yandex.searchplugin",
+    "ru.yandex.metro",
+    "ru.yandex.weatherplugin",
+    // Sber
+    "ru.sberbank.android.ru.mbfa",
+    "ru.sberbank_retail.android",
+    "com.sberbank.sbbol",
+    "ru.sberbank.spasibo",
+    "ru.sbrf.android.ru.mbfa",
+    // Tinkoff / T-Bank
+    "com.idamob.tinkoff.android",
+    "ru.tinkoff.banking.android",
+    // Other Russian banks and services
+    "ru.alfabank.mobile.android",
+    "ru.vtb24.mobilebanking.android",
+    "ru.raiffeisen.android",
+    "ru.gazprombank.android",
+    "ru.rosbank.android",
+    "ru.ozon.app.android",
+    "ru.wildberries.b2b",
+    "com.wildberries.ru",
+    "ru.avito",
+    "com.avito.android",
+    "ru.auto.ara",
+    "ru.cian.main",
+    "com.hh.android",
+    "ru.superjob.android",
+    "com.gosuslugi.client",
+    "ru.gosuslugi",
+    "ru.mos.mos",
+    "com.russianpost.tracking",
+    "ru.leroymerlin.domclick",
+    "ru.domclick.mobile",
+    "ru.kinopoisk.android",
+    "com.rutube.ru",
+    "com.2ip.checker",
 )
 
 data class SplitTunnelUiState(
@@ -36,13 +94,22 @@ data class SplitTunnelUiState(
     val ruBypass: Boolean = false,
     val vpnActive: Boolean = false,
 ) {
-    val filtered: List<InstalledApp> =
-        if (query.isBlank()) {
-            apps.filter { !it.isSystem }
-        } else {
-            val q = query.trim().lowercase()
-            apps.filter { !it.isSystem && (it.label.lowercase().contains(q) || it.packageName.lowercase().contains(q)) }
+    private val nonSystem: List<InstalledApp>
+        get() {
+            val base = apps.filter { !it.isSystem }
+            return if (query.isBlank()) {
+                base
+            } else {
+                val q = query.trim().lowercase()
+                base.filter { it.label.lowercase().contains(q) || it.packageName.lowercase().contains(q) }
+            }
         }
+
+    val filtered: List<InstalledApp> get() = nonSystem
+
+    val filteredRu: List<InstalledApp> get() = nonSystem.filter { it.isRussian }
+
+    val filteredOther: List<InstalledApp> get() = nonSystem.filter { !it.isRussian }
 }
 
 @HiltViewModel
@@ -151,6 +218,7 @@ constructor(
                         label = ai?.loadLabel(pm)?.toString() ?: pkg.packageName,
                         isSystem = ai != null &&
                             (ai.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0,
+                        isRussian = pkg.packageName in RU_PACKAGES,
                     )
                 }
                 .sortedWith(compareBy({ it.isSystem }, { it.label.lowercase() }))

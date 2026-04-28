@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.stickyHeader
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +46,36 @@ import com.paykeyfear.vpn.ui.theme.AmberColor
 import com.paykeyfear.vpn.ui.theme.DangerColor
 import com.paykeyfear.vpn.ui.theme.TextMuted
 import com.paykeyfear.vpn.viewmodel.SplitTunnelViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppRow(
+    app: com.paykeyfear.vpn.viewmodel.InstalledApp,
+    state: com.paykeyfear.vpn.viewmodel.SplitTunnelUiState,
+    editing: Boolean,
+    viewModel: SplitTunnelViewModel,
+) {
+    val checked = app.packageName in state.selected
+    ListItem(
+        headlineContent = {
+            Text(
+                app.label,
+                color = if (editing) MaterialTheme.colorScheme.onSurface else TextMuted,
+            )
+        },
+        supportingContent = {
+            Text(app.packageName, style = MaterialTheme.typography.bodySmall)
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = { viewModel.toggle(app.packageName, it) },
+                enabled = editing && state.mode != SplitTunnelMode.Off,
+            )
+        },
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,35 +204,39 @@ fun SplitTunnelScreen(
                     contentPadding = PaddingValues(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
-                    items(state.filtered, key = { it.packageName }) { app ->
-                        val checked = app.packageName in state.selected
-                        ListItem(
-                            headlineContent = {
+                    if (state.filteredRu.isNotEmpty()) {
+                        stickyHeader {
+                            Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
                                 Text(
-                                    app.label,
-                                    color = if (editing) MaterialTheme.colorScheme.onSurface else TextMuted,
+                                    stringResource(R.string.split_section_russian),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                            },
-                            supportingContent = {
-                                Text(app.packageName, style = MaterialTheme.typography.bodySmall)
-                            },
-                            leadingContent = {
-                                if (app.isSystem) {
-                                    Icon(
-                                        Icons.Filled.Settings,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.outline,
-                                    )
-                                }
-                            },
-                            trailingContent = {
-                                Switch(
-                                    checked = checked,
-                                    onCheckedChange = { viewModel.toggle(app.packageName, it) },
-                                    enabled = editing && state.mode != SplitTunnelMode.Off,
+                            }
+                        }
+                        items(state.filteredRu, key = { it.packageName }) { app ->
+                            AppRow(app, state, editing, viewModel)
+                        }
+                    }
+                    if (state.filteredOther.isNotEmpty()) {
+                        stickyHeader {
+                            Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Text(
+                                    stringResource(R.string.split_section_other),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                            },
-                        )
+                            }
+                        }
+                        items(state.filteredOther, key = { it.packageName }) { app ->
+                            AppRow(app, state, editing, viewModel)
+                        }
                     }
                 }
             }
