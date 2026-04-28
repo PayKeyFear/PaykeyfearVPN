@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -144,6 +145,24 @@ fun SplitTunnelScreen(
                         onCheckedChange = viewModel::setRuBypass,
                         enabled = editing,
                     )
+                },
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.split_ru_apps_bypass_title)) },
+                supportingContent = {
+                    Text(
+                        stringResource(R.string.split_ru_apps_bypass_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                },
+                trailingContent = {
+                    Button(
+                        onClick = viewModel::selectAllRussianAppsBypass,
+                        enabled = editing,
+                    ) {
+                        Text(stringResource(R.string.split_ru_apps_bypass_btn))
+                    }
                 },
             )
             HorizontalDivider()

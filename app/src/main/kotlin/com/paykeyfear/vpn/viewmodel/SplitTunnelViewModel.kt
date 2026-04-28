@@ -201,6 +201,19 @@ constructor(
         viewModelScope.launch { preferences.setRuBypassEnabled(enabled) }
     }
 
+    fun selectAllRussianAppsBypass() {
+        if (state.value.vpnActive) return
+        viewModelScope.launch {
+            val current = preferences.splitTunnelPackages.first()
+            val ruInstalled = apps.value
+                .filter { it.isRussian && !it.isSystem }
+                .map { it.packageName }
+                .toSet()
+            preferences.setSplitTunnelPackages(current + ruInstalled)
+            preferences.setSplitTunnelMode(SplitTunnelMode.Denylist)
+        }
+    }
+
     private suspend fun loadInstalledApps(): List<InstalledApp> =
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
